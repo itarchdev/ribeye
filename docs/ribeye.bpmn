@@ -1,0 +1,352 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="sid-38422fae-e03e-43a3-bef4-bd33b32041b2" targetNamespace="http://bpmn.io/bpmn" exporter="bpmn-js (https://demo.bpmn.io)" exporterVersion="18.9.0">
+  <bpmn:process id="Process_Steak" isExecutable="false">
+    <bpmn:startEvent id="Start_Order" name="Заказ стейка">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Order" targetRef="Gateway_Critical" />
+    <bpmn:parallelGateway id="Gateway_Critical" name="Критическая подготовка">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_Meat</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Grill</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_Meat" name="Проверка свежести мяса">
+      <bpmn:incoming>Flow_Meat</bpmn:incoming>
+      <bpmn:outgoing>Flow_Check_Meat</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Meat_QC" name="Мясо ОК?">
+      <bpmn:incoming>Flow_Check_Meat</bpmn:incoming>
+      <bpmn:outgoing>Flow_Meat_No</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0pspt8f</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Grill" name="Разогрев гриля">
+      <bpmn:incoming>Flow_Grill</bpmn:incoming>
+      <bpmn:outgoing>Flow_Check_Grill</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Grill_QC" name="Гриль ОК?">
+      <bpmn:incoming>Flow_Check_Grill</bpmn:incoming>
+      <bpmn:outgoing>Flow_Grill_No</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1m1ra7j</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_Meat" sourceRef="Gateway_Critical" targetRef="Task_Meat" />
+    <bpmn:sequenceFlow id="Flow_Grill" sourceRef="Gateway_Critical" targetRef="Task_Grill" />
+    <bpmn:sequenceFlow id="Flow_Check_Meat" sourceRef="Task_Meat" targetRef="Gateway_Meat_QC" />
+    <bpmn:sequenceFlow id="Flow_Check_Grill" sourceRef="Task_Grill" targetRef="Gateway_Grill_QC" />
+    <bpmn:endEvent id="Error_End" name="ОТМЕНА ЗАКАЗА (Критический сбой)">
+      <bpmn:incoming>Flow_Meat_No</bpmn:incoming>
+      <bpmn:incoming>Flow_Grill_No</bpmn:incoming>
+      <bpmn:errorEventDefinition id="Error_Def" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Meat_No" sourceRef="Gateway_Meat_QC" targetRef="Error_End" />
+    <bpmn:sequenceFlow id="Flow_Grill_No" name="Нет" sourceRef="Gateway_Grill_QC" targetRef="Error_End" />
+    <bpmn:task id="Task_Fry" name="Жарка стейка">
+      <bpmn:incoming>Flow_164o8a2</bpmn:incoming>
+      <bpmn:outgoing>Flow_0fkedpb</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:parallelGateway id="Gateway_NonCritical">
+      <bpmn:incoming>Flow_0pspt8f</bpmn:incoming>
+      <bpmn:incoming>Flow_1m1ra7j</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sauce</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Decoration</bpmn:outgoing>
+      <bpmn:outgoing>Flow_164o8a2</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_Sauce" name="Приготовление соуса">
+      <bpmn:incoming>Flow_Sauce</bpmn:incoming>
+      <bpmn:outgoing>Flow_Check_Sauce</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1girwrb</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Sauce_QC" name="Удался?">
+      <bpmn:incoming>Flow_Check_Sauce</bpmn:incoming>
+      <bpmn:incoming>Flow_1girwrb</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sauce_Ok</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Sauce_Fail</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Decor" name="Обжарка декора (розмарин)">
+      <bpmn:incoming>Flow_Decoration</bpmn:incoming>
+      <bpmn:outgoing>Flow_Check_Decor</bpmn:outgoing>
+      <bpmn:outgoing>Flow_02m14mp</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Decor_QC" name="Сгорел?">
+      <bpmn:incoming>Flow_Check_Decor</bpmn:incoming>
+      <bpmn:incoming>Flow_02m14mp</bpmn:incoming>
+      <bpmn:outgoing>Flow_Decor_Ok</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Decor_Fail</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_Sauce" sourceRef="Gateway_NonCritical" targetRef="Task_Sauce" />
+    <bpmn:sequenceFlow id="Flow_Check_Sauce" sourceRef="Task_Sauce" targetRef="Gateway_Sauce_QC" />
+    <bpmn:sequenceFlow id="Flow_Sauce_Ok" name="Да" sourceRef="Gateway_Sauce_QC" targetRef="Gateway_Join_Final" />
+    <bpmn:sequenceFlow id="Flow_Sauce_Fail" name="Нет" sourceRef="Gateway_Sauce_QC" targetRef="Notify_Sauce" />
+    <bpmn:sequenceFlow id="Flow_Decoration" sourceRef="Gateway_NonCritical" targetRef="Task_Decor" />
+    <bpmn:sequenceFlow id="Flow_Check_Decor" sourceRef="Task_Decor" targetRef="Gateway_Decor_QC" />
+    <bpmn:sequenceFlow id="Flow_Decor_Ok" name="Нет" sourceRef="Gateway_Decor_QC" targetRef="Gateway_Join_Final" />
+    <bpmn:sequenceFlow id="Flow_Decor_Fail" name="Да" sourceRef="Gateway_Decor_QC" targetRef="Notify_Decor" />
+    <bpmn:parallelGateway id="Gateway_Join_Final">
+      <bpmn:incoming>Flow_Sauce_Ok</bpmn:incoming>
+      <bpmn:incoming>Flow_Decor_Ok</bpmn:incoming>
+      <bpmn:incoming>Flow_0fsw2sn</bpmn:incoming>
+      <bpmn:incoming>Flow_17v6uty</bpmn:incoming>
+      <bpmn:incoming>Flow_0miq737</bpmn:incoming>
+      <bpmn:outgoing>Flow_Final</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:endEvent id="End_Serve" name="Блюдо подано гостю">
+      <bpmn:incoming>Flow_Final</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_Final" sourceRef="Gateway_Join_Final" targetRef="End_Serve" />
+    <bpmn:sequenceFlow id="Flow_1girwrb" sourceRef="Task_Sauce" targetRef="Gateway_Sauce_QC" />
+    <bpmn:sequenceFlow id="Flow_02m14mp" sourceRef="Task_Decor" targetRef="Gateway_Decor_QC" />
+    <bpmn:sequenceFlow id="Flow_164o8a2" sourceRef="Gateway_NonCritical" targetRef="Task_Fry" />
+    <bpmn:sequenceFlow id="Flow_0pspt8f" sourceRef="Gateway_Meat_QC" targetRef="Gateway_NonCritical" />
+    <bpmn:sequenceFlow id="Flow_1m1ra7j" sourceRef="Gateway_Grill_QC" targetRef="Gateway_NonCritical" />
+    <bpmn:exclusiveGateway id="Gateway_0partb9">
+      <bpmn:incoming>Flow_0fkedpb</bpmn:incoming>
+      <bpmn:outgoing>Flow_0fsw2sn</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0k9jbnw</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0fsw2sn" sourceRef="Gateway_0partb9" targetRef="Gateway_Join_Final" />
+    <bpmn:sequenceFlow id="Flow_0fkedpb" sourceRef="Task_Fry" targetRef="Gateway_0partb9" />
+    <bpmn:endEvent id="Event_1naboe1">
+      <bpmn:incoming>Flow_0k9jbnw</bpmn:incoming>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_1lcxt0q" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0k9jbnw" sourceRef="Gateway_0partb9" targetRef="Event_1naboe1" />
+    <bpmn:sendTask id="Notify_Sauce" name="Уведомить: Стейк без соуса">
+      <bpmn:incoming>Flow_Sauce_Fail</bpmn:incoming>
+      <bpmn:outgoing>Flow_17v6uty</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Notify_Decor" name="Уведомить: Стейк без декора">
+      <bpmn:incoming>Flow_Decor_Fail</bpmn:incoming>
+      <bpmn:outgoing>Flow_0miq737</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sequenceFlow id="Flow_17v6uty" sourceRef="Notify_Sauce" targetRef="Gateway_Join_Final" />
+    <bpmn:sequenceFlow id="Flow_0miq737" sourceRef="Notify_Decor" targetRef="Gateway_Join_Final" />
+    <bpmn:textAnnotation id="TextAnnotation_1afsq77">
+      <bpmn:text>нет</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_0bc18f7" associationDirection="None" sourceRef="Flow_Meat_No" targetRef="TextAnnotation_1afsq77" />
+    <bpmn:textAnnotation id="TextAnnotation_0fdylaf">
+      <bpmn:text>Да</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_07p7unq" associationDirection="None" sourceRef="Flow_1m1ra7j" targetRef="TextAnnotation_0fdylaf" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_Steak">
+      <bpmndi:BPMNShape id="Start_Order_di" bpmnElement="Start_Order">
+        <dc:Bounds x="152" y="352" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="137" y="388" width="66" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Critical_di" bpmnElement="Gateway_Critical">
+        <dc:Bounds x="245" y="345" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="304.5" y="356" width="65" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Meat_di" bpmnElement="Task_Meat">
+        <dc:Bounds x="340" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Meat_QC_di" bpmnElement="Gateway_Meat_QC" isMarkerVisible="true">
+        <dc:Bounds x="485" y="265" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="484" y="223" width="51" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Error_End_di" bpmnElement="Error_End">
+        <dc:Bounds x="492" y="352" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="532" y="323" width="68" height="53" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Join_Final_di" bpmnElement="Gateway_Join_Final">
+        <dc:Bounds x="1185" y="265" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Decor_QC_di" bpmnElement="Gateway_Decor_QC" isMarkerVisible="true">
+        <dc:Bounds x="1045" y="455" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1048" y="523" width="43" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Sauce_QC_di" bpmnElement="Gateway_Sauce_QC" isMarkerVisible="true">
+        <dc:Bounds x="1045" y="105" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1048" y="81" width="44" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Serve_di" bpmnElement="End_Serve">
+        <dc:Bounds x="1292" y="272" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1273" y="308" width="75" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Grill_di" bpmnElement="Task_Grill">
+        <dc:Bounds x="340" y="410" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Grill_QC_di" bpmnElement="Gateway_Grill_QC" isMarkerVisible="true">
+        <dc:Bounds x="485" y="425" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="483" y="475" width="55" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_NonCritical_di" bpmnElement="Gateway_NonCritical">
+        <dc:Bounds x="665" y="265" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Sauce_di" bpmnElement="Task_Sauce">
+        <dc:Bounds x="750" y="90" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Fry_di" bpmnElement="Task_Fry">
+        <dc:Bounds x="750" y="250" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Decor_di" bpmnElement="Task_Decor">
+        <dc:Bounds x="750" y="440" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0partb9_di" bpmnElement="Gateway_0partb9" isMarkerVisible="true">
+        <dc:Bounds x="905" y="265" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0pai3k1_di" bpmnElement="Event_1naboe1">
+        <dc:Bounds x="912" y="352" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_1idwtao_di" bpmnElement="Notify_Sauce">
+        <dc:Bounds x="1020" y="190" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0pu7g5f_di" bpmnElement="Notify_Decor">
+        <dc:Bounds x="1020" y="330" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Association_0bc18f7_di" bpmnElement="Association_0bc18f7">
+        <di:waypoint x="510" y="333.5" />
+        <di:waypoint x="510" y="334" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_07p7unq_di" bpmnElement="Association_07p7unq">
+        <di:waypoint x="599.5456268359708" y="370" />
+        <di:waypoint x="570" y="420" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
+        <di:waypoint x="188" y="370" />
+        <di:waypoint x="245" y="370" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Meat_di" bpmnElement="Flow_Meat">
+        <di:waypoint x="270" y="345" />
+        <di:waypoint x="270" y="290" />
+        <di:waypoint x="340" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Grill_di" bpmnElement="Flow_Grill">
+        <di:waypoint x="270" y="395" />
+        <di:waypoint x="270" y="450" />
+        <di:waypoint x="340" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Check_Meat_di" bpmnElement="Flow_Check_Meat">
+        <di:waypoint x="440" y="290" />
+        <di:waypoint x="485" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Check_Grill_di" bpmnElement="Flow_Check_Grill">
+        <di:waypoint x="440" y="450" />
+        <di:waypoint x="485" y="450" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Meat_No_di" bpmnElement="Flow_Meat_No">
+        <di:waypoint x="510" y="315" />
+        <di:waypoint x="510" y="352" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="479" y="165" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Grill_No_di" bpmnElement="Flow_Grill_No">
+        <di:waypoint x="510" y="425" />
+        <di:waypoint x="510" y="388" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="470" y="403" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sauce_di" bpmnElement="Flow_Sauce">
+        <di:waypoint x="690" y="265" />
+        <di:waypoint x="690" y="130" />
+        <di:waypoint x="750" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sauce_Ok_di" bpmnElement="Flow_Sauce_Ok">
+        <di:waypoint x="1095" y="130" />
+        <di:waypoint x="1210" y="130" />
+        <di:waypoint x="1210" y="265" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1146" y="105" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Sauce_Fail_di" bpmnElement="Flow_Sauce_Fail">
+        <di:waypoint x="1070" y="155" />
+        <di:waypoint x="1070" y="190" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1075" y="162" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Decoration_di" bpmnElement="Flow_Decoration">
+        <di:waypoint x="690" y="315" />
+        <di:waypoint x="690" y="480" />
+        <di:waypoint x="750" y="480" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Decor_Ok_di" bpmnElement="Flow_Decor_Ok">
+        <di:waypoint x="1095" y="480" />
+        <di:waypoint x="1210" y="480" />
+        <di:waypoint x="1210" y="315" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1143" y="455" width="20" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Decor_Fail_di" bpmnElement="Flow_Decor_Fail">
+        <di:waypoint x="1070" y="455" />
+        <di:waypoint x="1070" y="410" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1073" y="438" width="14" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Final_di" bpmnElement="Flow_Final">
+        <di:waypoint x="1235" y="290" />
+        <di:waypoint x="1292" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1girwrb_di" bpmnElement="Flow_1girwrb">
+        <di:waypoint x="850" y="130" />
+        <di:waypoint x="1045" y="130" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_02m14mp_di" bpmnElement="Flow_02m14mp">
+        <di:waypoint x="850" y="480" />
+        <di:waypoint x="1045" y="480" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_164o8a2_di" bpmnElement="Flow_164o8a2">
+        <di:waypoint x="715" y="290" />
+        <di:waypoint x="750" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0pspt8f_di" bpmnElement="Flow_0pspt8f">
+        <di:waypoint x="535" y="290" />
+        <di:waypoint x="665" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1m1ra7j_di" bpmnElement="Flow_1m1ra7j">
+        <di:waypoint x="523" y="438" />
+        <di:waypoint x="677" y="302" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="TextAnnotation_1afsq77_di" bpmnElement="TextAnnotation_1afsq77">
+        <dc:Bounds x="460" y="319" width="50" height="30" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TextAnnotation_0fdylaf_di" bpmnElement="TextAnnotation_0fdylaf">
+        <dc:Bounds x="560" y="420" width="50" height="30" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0fsw2sn_di" bpmnElement="Flow_0fsw2sn">
+        <di:waypoint x="955" y="290" />
+        <di:waypoint x="1185" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0fkedpb_di" bpmnElement="Flow_0fkedpb">
+        <di:waypoint x="850" y="290" />
+        <di:waypoint x="905" y="290" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0k9jbnw_di" bpmnElement="Flow_0k9jbnw">
+        <di:waypoint x="930" y="315" />
+        <di:waypoint x="930" y="352" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17v6uty_di" bpmnElement="Flow_17v6uty">
+        <di:waypoint x="1120" y="248" />
+        <di:waypoint x="1195" y="280" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0miq737_di" bpmnElement="Flow_0miq737">
+        <di:waypoint x="1120" y="345" />
+        <di:waypoint x="1196" y="301" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
