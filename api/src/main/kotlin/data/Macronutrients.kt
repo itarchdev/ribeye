@@ -1,4 +1,4 @@
-package ru.it_arch.tools.samples.ribeye.storage
+package ru.it_arch.tools.samples.ribeye.data
 
 import ru.it_arch.k3dm.ValueObject
 
@@ -68,7 +68,7 @@ public interface Macronutrients : ValueObject.Data {
      * */
     public interface Carbohydrates : ValueObject.Value<Double>, Comparable<Carbohydrates> {
         override fun validate() {
-            require(boxed >= 0.0) { "Carbohydrate must be >= 0" }
+            require(boxed >=  0.0) { "Carbohydrate must be >= 0" }
         }
 
         override fun compareTo(other: Carbohydrates): Int =

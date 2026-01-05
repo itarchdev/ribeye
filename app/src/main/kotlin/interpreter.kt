@@ -3,6 +3,7 @@ package ru.it_arch.tools.samples.ribeye.app
 import ru.it_arch.tools.samples.ribeye.dsl.impl.cookingProcess
 import ru.it_arch.tools.samples.ribeye.storage.ResourceOld
 
+// Это повар
 val interpreter = cookingProcess {
     getMeat = { storage ->
         val meat = storage.get(ResourceOld.Meat::class)

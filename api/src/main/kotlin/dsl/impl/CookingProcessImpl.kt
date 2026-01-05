@@ -1,25 +1,27 @@
 package ru.it_arch.tools.samples.ribeye.dsl.impl
 
 import ru.it_arch.k3dm.ValueObject
+import ru.it_arch.tools.samples.ribeye.ResourceRepository
 import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
 import ru.it_arch.tools.samples.ribeye.dsl.Event
-import ru.it_arch.tools.samples.ribeye.dsl.ResourceState
+import ru.it_arch.tools.samples.ribeye.dsl.Op
+import ru.it_arch.tools.samples.ribeye.dsl.OpResult
+import ru.it_arch.tools.samples.ribeye.dsl.Steak
 import ru.it_arch.tools.samples.ribeye.dsl.impl.OpCompletedImpl.Companion.opCompleted
-import ru.it_arch.tools.samples.ribeye.storage.Storage
 
 @ConsistentCopyVisibility
 public data class CookingProcessImpl private constructor(
-    override val `get meat from storage`: CookingProcess.Op.GetMeat,
-    override val `check meat freshness`: CookingProcess.Op.CheckMeat,
-    override val `marinate meat`: CookingProcess.Op.MarinateMeat,
-    override val `roast meat`: CookingProcess.Op.RoastMeat,
-    override val `get grill from storage`: CookingProcess.Op.GetGrill,
-    override val `check grill`: CookingProcess.Op.CheckGrill,
-    override val `get sauce ingredients from storage`: CookingProcess.Op.GetSauceIngredients,
-    override val `prepare sauce`: CookingProcess.Op.PrepareSauce,
-    override val `get rosemary from storage`: CookingProcess.Op.GetRosemary,
-    override val `roast rosemary`: CookingProcess.Op.RoastRosemary,
-    override val `serve ribeye steak`: CookingProcess.Op.Finish
+    override val `get meat from storage`: Op.Meat.Get,
+    override val `check meat freshness`: Op.Meat.Check,
+    override val `marinate meat`: Op.Meat.Marinate,
+    override val `roast meat`: Op.Meat.Roast,
+    override val `get grill from storage`: Op.Grill.Get,
+    override val `check grill`: Op.Grill.Check,
+    override val `get sauce ingredients from storage`: Op.Sauce.Get,
+    override val `prepare sauce`: Op.Sauce.Prepare,
+    override val `get rosemary from storage`: Op.Rosemary.Get,
+    override val `roast rosemary`: Op.Rosemary.Roast,
+    override val `serve ribeye steak`: Op.Finish
 ) : CookingProcess {
 
     init {
@@ -31,18 +33,18 @@ public data class CookingProcessImpl private constructor(
     }
 
     public class Builder() {
-        public var getMeat: (suspend (Storage) -> Result<ResourceState.Meat>)? = null
-        public var checkMeat: ((ResourceState.Meat) -> Result<ResourceState.Meat>)? = null
-        public var marinate: ((ResourceState.Meat) -> Result<ResourceState.Meat>)? = null
-        public var roastMeat: ((ResourceState.Meat) -> Result<ResourceState.Meat>)? = null
-        public var getGrill: ((Storage) -> Result<ResourceState.Grill>)? = null
-        public var checkGrill: ((ResourceState.Grill) -> Result<ResourceState.Grill>)? = null
-        public var getSauceIngredients: ((Storage) -> Result<ResourceState.Sauce>)? = null
-        public var prepareSauce: ((ResourceState.Sauce) -> Result<ResourceState.Sauce>)? = null
-        public var getRosemary: ((Storage) -> Result<ResourceState.Rosemary>)? = null
-        public var roastRosemary: ((ResourceState.Rosemary) -> Result<ResourceState.Rosemary>)? = null
-        public var finish: ((ResourceState.Meat, ResourceState.Sauce?, ResourceState.Rosemary?) -> Result<ResourceState.Steak>)? = null
-        public var listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)? = null
+        public var getMeat: (suspend (ResourceRepository) -> Result<OpResult<Op.Meat.Get>>)? = null
+        public var checkMeat: ((OpResult<Op.Meat.Get>) -> Result<OpResult<Op.Meat.Check>>)? = null
+        public var marinate: ((OpResult<Op.Meat.Check>) -> Result<OpResult<Op.Meat.Marinate>>)? = null
+        public var roastMeat: ((OpResult<Op.Meat.Marinate>) -> Result<OpResult<Op.Meat.Roast>>)? = null
+        public var getGrill: ((ResourceRepository) -> Result<OpResult<Op.Grill.Get>>)? = null
+        public var checkGrill: ((OpResult<Op.Grill.Get>) -> Result<OpResult<Op.Grill.Check>>)? = null
+        public var getSauceIngredients: ((ResourceRepository) -> Result<OpResult<Op.Sauce.Get>>)? = null
+        public var prepareSauce: ((OpResult<Op.Sauce.Get>) -> Result<OpResult<Op.Sauce.Prepare>>)? = null
+        public var getRosemary: ((ResourceRepository) -> Result<OpResult<Op.Rosemary.Get>>)? = null
+        public var roastRosemary: ((OpResult<Op.Rosemary.Get>) -> Result<OpResult<Op.Rosemary.Roast>>)? = null
+        public var finish: ((OpResult<Op.Meat.Roast>, OpResult<Op.Sauce.Prepare>?, OpResult<Op.Rosemary.Roast>?) -> Result<Steak>)? = null
+        public var listener: ((Event.OpCompleted<out Op>) -> Unit)? = null
 
         public fun build(): CookingProcess {
             requireNotNull(getMeat) { "getMeat op must be set" }
@@ -65,7 +67,7 @@ public data class CookingProcessImpl private constructor(
                 `roast meat` = RoastMeatWrapper(roastMeat!!, listener),
                 `get grill from storage` = GetGrillWrapper(getGrill!!, listener),
                 `check grill` = CheckGrillWrapper(checkGrill!!, listener),
-                `get sauce ingredients from storage` = GetSauceIngredientsWrapper(getSauceIngredients!!, listener),
+                `get sauce ingredients from storage` = GetSauceWrapper(getSauceIngredients!!, listener),
                 `prepare sauce` = PrepareSauceWrapper(prepareSauce!!, listener),
                 `get rosemary from storage` = GetRosemaryWrapper(getRosemary!!, listener),
                 `roast rosemary` = RoastRosemaryWrapper(roastRosemary!!, listener),
@@ -75,100 +77,100 @@ public data class CookingProcessImpl private constructor(
     }
 
     private class GetMeatWrapper(
-        private val getMeat: CookingProcess.Op.GetMeat,
-        private val listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)?
-    ) : CookingProcess.Op.GetMeat by getMeat {
+        private val getMeat: Op.Meat.Get,
+        private val listener: ((Event.OpCompleted<Op.Meat.Get>) -> Unit)?
+    ) : Op.Meat.Get by getMeat {
 
-        override suspend fun invoke(storage: Storage): Result<ResourceState.Meat> =
+        override suspend fun invoke(storage: ResourceRepository): Result<OpResult<Op.Meat.Get>> =
             getMeat(storage).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
     private class CheckMeatWrapper(
-        private val checkMeat: CookingProcess.Op.CheckMeat,
-        private val listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)?
-    ) : CookingProcess.Op.CheckMeat by checkMeat {
+        private val checkMeat: Op.Meat.Check,
+        private val listener: ((Event.OpCompleted<Op.Meat.Check>) -> Unit)?
+    ) : Op.Meat.Check by checkMeat {
 
-        override fun invoke(meat: ResourceState.Meat): Result<ResourceState.Meat> =
+        override fun invoke(meat: OpResult<Op.Meat.Get>): Result<OpResult<Op.Meat.Check>> =
             checkMeat(meat).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
     private class MarinateWrapper(
-        private val marinate: CookingProcess.Op.MarinateMeat,
-        private val listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)?
-    ): CookingProcess.Op.MarinateMeat by marinate {
+        private val marinate: Op.Meat.Marinate,
+        private val listener: ((Event.OpCompleted<Op.Meat.Marinate>) -> Unit)?
+    ): Op.Meat.Marinate by marinate {
 
-        override fun invoke(meat: ResourceState.Meat): Result<ResourceState.Meat> =
+        override fun invoke(meat: OpResult<Op.Meat.Check>): Result<OpResult<Op.Meat.Marinate>> =
             marinate(meat).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
     private class RoastMeatWrapper(
-        private val roastMeat: CookingProcess.Op.RoastMeat,
-        private val listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)?
-    ) : CookingProcess.Op.RoastMeat by roastMeat {
-        override fun invoke(meat: ResourceState.Meat): Result<ResourceState.Meat> =
+        private val roastMeat: Op.Meat.Roast,
+        private val listener: ((Event.OpCompleted<Op.Meat.Roast>) -> Unit)?
+    ) : Op.Meat.Roast by roastMeat {
+        override fun invoke(meat: OpResult<Op.Meat.Marinate>): Result<OpResult<Op.Meat.Roast>> =
             roastMeat(meat).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
     private class GetGrillWrapper(
-        private val getGrill: CookingProcess.Op.GetGrill,
-        private val listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)?
-    ) : CookingProcess.Op.GetGrill by getGrill {
+        private val getGrill: Op.Grill.Get,
+        private val listener: ((Event.OpCompleted<Op.Grill.Get>) -> Unit)?
+    ) : Op.Grill.Get by getGrill {
 
-        override fun invoke(storage: Storage): Result<ResourceState.Grill> =
+        override fun invoke(storage: ResourceRepository): Result<OpResult<Op.Grill.Get>> =
             getGrill(storage).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
     private class CheckGrillWrapper(
-        private val checkGreill: CookingProcess.Op.CheckGrill,
-        private val listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)?
-    ) : CookingProcess.Op.CheckGrill by checkGreill {
-        override fun invoke(grill: ResourceState.Grill): Result<ResourceState.Grill> =
+        private val checkGreill: Op.Grill.Check,
+        private val listener: ((Event.OpCompleted<Op.Grill.Check>) -> Unit)?
+    ) : Op.Grill.Check by checkGreill {
+        override fun invoke(grill: OpResult<Op.Grill.Get>): Result<OpResult<Op.Grill.Check>> =
             checkGreill(grill).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
-    private class GetSauceIngredientsWrapper(
-        private val getSauceIngredients: CookingProcess.Op.GetSauceIngredients,
-        private val listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)?
-    ) : CookingProcess.Op.GetSauceIngredients by getSauceIngredients {
+    private class GetSauceWrapper(
+        private val getSauce: Op.Sauce.Get,
+        private val listener: ((Event.OpCompleted<Op.Sauce.Get>) -> Unit)?
+    ) : Op.Sauce.Get by getSauce {
 
-        override fun invoke(storage: Storage): Result<ResourceState.Sauce> =
-            getSauceIngredients(storage).also { result -> listener?.let { it(opCompleted(result)) } }
+        override fun invoke(storage: ResourceRepository): Result<OpResult<Op.Sauce.Get>> =
+            getSauce(storage).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
     private class PrepareSauceWrapper(
-        private val prepareSauce: CookingProcess.Op.PrepareSauce,
-        private val listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)?
-    ) : CookingProcess.Op.PrepareSauce by prepareSauce {
-        override fun invoke(sauce: ResourceState.Sauce): Result<ResourceState.Sauce> =
+        private val prepareSauce: Op.Sauce.Prepare,
+        private val listener: ((Event.OpCompleted<Op.Sauce.Prepare>) -> Unit)?
+    ) : Op.Sauce.Prepare by prepareSauce {
+        override fun invoke(sauce: OpResult<Op.Sauce.Get>): Result<OpResult<Op.Sauce.Prepare>> =
             prepareSauce(sauce).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
     private class GetRosemaryWrapper(
-        private val getRosemary: CookingProcess.Op.GetRosemary,
-        private val listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)?
-    ) : CookingProcess.Op.GetRosemary by getRosemary {
+        private val getRosemary: Op.Rosemary.Get,
+        private val listener: ((Event.OpCompleted<Op.Rosemary.Get>) -> Unit)?
+    ) : Op.Rosemary.Get by getRosemary {
 
-        override fun invoke(storage: Storage): Result<ResourceState.Rosemary> =
+        override fun invoke(storage: ResourceRepository): Result<OpResult<Op.Rosemary.Get>> =
             getRosemary(storage).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
     private class RoastRosemaryWrapper(
-        private val roastRosemary: CookingProcess.Op.RoastRosemary,
-        private val listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)?
-    ) : CookingProcess.Op.RoastRosemary by roastRosemary {
-        override fun invoke(rosemary: ResourceState.Rosemary): Result<ResourceState.Rosemary> =
+        private val roastRosemary: Op.Rosemary.Roast,
+        private val listener: ((Event.OpCompleted<Op.Rosemary.Roast>) -> Unit)?
+    ) : Op.Rosemary.Roast by roastRosemary {
+        override fun invoke(rosemary: OpResult<Op.Rosemary.Get>): Result<OpResult<Op.Rosemary.Roast>> =
             roastRosemary(rosemary).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
     private class FinishWrapper(
-        private val finish: CookingProcess.Op.Finish,
-        private val listener: ((Event.OpComplited<CookingProcess.Op>) -> Unit)?
-    ) : CookingProcess.Op.Finish by finish {
+        private val finish: Op.Finish,
+        private val listener: ((Event.OpCompleted<Op.Finish>) -> Unit)?
+    ) : Op.Finish by finish {
         override fun invoke(
-            meat: ResourceState.Meat,
-            sauce: ResourceState.Sauce?,
-            rosemary: ResourceState.Rosemary
-        ): Result<ResourceState.Steak> =
+            meat: OpResult<Op.Meat.Roast>,
+            sauce: OpResult<Op.Sauce.Prepare>?,
+            rosemary: OpResult<Op.Rosemary.Roast>?
+        ): Result<Steak> =
             finish(meat, sauce, rosemary)
                 .also { result -> listener?.let { it(opCompleted(result)) } }
     }

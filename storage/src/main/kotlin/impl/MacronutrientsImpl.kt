@@ -1,7 +1,6 @@
 package ru.it_arch.tools.samples.ribeye.storage.impl
 
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.storage.Macronutrients
 
 @ConsistentCopyVisibility
 public data class MacronutrientsImpl private constructor(
@@ -10,7 +9,7 @@ public data class MacronutrientsImpl private constructor(
     override val carbs: Macronutrients.Carbohydrates,
     override val calories: Macronutrients.Kcal
 ) : Macronutrients {
-    
+
     init {
         validate()
     }
@@ -23,7 +22,7 @@ public data class MacronutrientsImpl private constructor(
             carbs = args[2] as Macronutrients.Carbohydrates
             calories = args[3] as Macronutrients.Kcal
         }.build() as T
-    
+
     public class Builder {
         public var proteins: Macronutrients.Proteins? = null
         public var fats: Macronutrients.Fats? = null

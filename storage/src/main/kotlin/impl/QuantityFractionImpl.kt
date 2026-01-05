@@ -1,12 +1,12 @@
 package ru.it_arch.tools.samples.ribeye.storage.impl
 
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.storage.Quantity
+import ru.it_arch.tools.samples.ribeye.data.Quantity
 
 @ConsistentCopyVisibility
 public data class QuantityFractionImpl private constructor(
-    override val numerator: Long,
-    override val denominator: Long
+    override val numerator: Int,
+    override val denominator: Int
 ) : Quantity.Fraction {
     init {
         validate()
@@ -17,7 +17,7 @@ public data class QuantityFractionImpl private constructor(
     }
 
     public companion object {
-        public operator fun invoke(numerator: Long, denominator: Long): Quantity.Fraction =
+        public operator fun invoke(numerator: Int, denominator: Int): Quantity.Fraction =
             QuantityFractionImpl(numerator, denominator)
     }
 }

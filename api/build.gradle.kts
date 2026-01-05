@@ -15,5 +15,6 @@ kotlin {
 }
 
 dependencies {
-    api(project(":storage"))
+    api(libs.k3dm)
+    api(libs.kotlinx.datetime)
 }

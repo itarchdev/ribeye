@@ -1,19 +1,17 @@
 package ru.it_arch.tools.samples.ribeye.dsl.impl
 
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
 import ru.it_arch.tools.samples.ribeye.dsl.Event
-import ru.it_arch.tools.samples.ribeye.dsl.ResourceState
-import kotlin.reflect.KClass
+import ru.it_arch.tools.samples.ribeye.dsl.Op
+import ru.it_arch.tools.samples.ribeye.dsl.OpResult
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 @ConsistentCopyVisibility
-internal data class OpCompletedImpl<T : CookingProcess.Op> private constructor(
-    override val type: KClass<T>,
-    override val result: Result<ResourceState>,
+internal data class OpCompletedImpl<T : Op> private constructor(
+    override val result: Result<OpResult<T>>,
     override val timestamp: Instant = Clock.System.now(),
-): Event.OpComplited<T> {
+): Event.OpCompleted<T> {
     init {
         validate()
     }
@@ -23,7 +21,7 @@ internal data class OpCompletedImpl<T : CookingProcess.Op> private constructor(
     }
 
     companion object {
-        inline fun <reified T : CookingProcess.Op> opCompleted(result: Result<ResourceState>) =
-            OpCompletedImpl(T::class, result)
+        fun <T : Op> opCompleted(result: Result<OpResult<T>>) =
+            OpCompletedImpl(result)
     }
 }
