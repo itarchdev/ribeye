@@ -1,6 +1,7 @@
 package ru.it_arch.tools.samples.ribeye.data
 
 import ru.it_arch.k3dm.ValueObject
+import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -16,6 +17,8 @@ public sealed interface Resource : ValueObject.Data {
 
     /** Мясо для стейка */
     public interface Meat : Resource {
+        override val quantity: Quantity.Weight
+
         override fun validate() {
             // Проверка просроченности хранения
             Clock.System.now().also { now ->
@@ -34,11 +37,16 @@ public sealed interface Resource : ValueObject.Data {
 
     /** Условный гриль как ресурс. Для упрощения полагается как пищевой ресурс. */
     public interface Grill : Resource {
+        override val quantity: Quantity.Weight
+
+        // Не проверяем срок хранения
         override fun validate() {}
     }
 
     /** Компоненты для приготовления условного соуса. Для упрощения полагается как единый ресурс. */
     public interface SauceIngredients : Resource {
+        override val quantity: Quantity.Weight
+
         override fun validate() {
             Clock.System.now().also { now ->
                 (now - expiration.boxed).also { elapsed ->
@@ -55,6 +63,8 @@ public sealed interface Resource : ValueObject.Data {
 
     /** Розмарин */
     public interface Rosemary : Resource {
+        override val quantity: Quantity.Piece
+
         override fun validate() {
             Clock.System.now().also { now ->
                 (now - expiration.boxed).also { elapsed ->
@@ -69,4 +79,10 @@ public sealed interface Resource : ValueObject.Data {
         }
     }
 
+    public enum class Types(public val type: KClass<out Resource>) {
+        MEAT(Meat::class),
+        GRILL(Grill::class),
+        SAUCE(SauceIngredients::class),
+        ROSEMARY(Rosemary::class)
+    }
 }

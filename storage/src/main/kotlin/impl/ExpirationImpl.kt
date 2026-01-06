@@ -2,6 +2,7 @@ package ru.it_arch.tools.samples.ribeye.storage.impl
 
 import kotlinx.datetime.toInstant
 import ru.it_arch.k3dm.ValueObject
+import ru.it_arch.tools.samples.ribeye.data.Expiration
 import kotlin.time.Instant
 
 @JvmInline
@@ -13,9 +14,9 @@ public value class ExpirationImpl private constructor(
         validate()
     }
 
-    override fun <T : ValueObject.Value<Instant>> apply(boxed: Instant): T {
-        TODO("Not used")
-    }
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ValueObject.Value<Instant>> apply(boxed: Instant): T =
+        ExpirationImpl(boxed) as T
 
     override fun toString(): String =
         Expiration.format(boxed)

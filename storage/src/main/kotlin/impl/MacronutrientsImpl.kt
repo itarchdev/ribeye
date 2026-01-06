@@ -1,6 +1,7 @@
 package ru.it_arch.tools.samples.ribeye.storage.impl
 
 import ru.it_arch.k3dm.ValueObject
+import ru.it_arch.tools.samples.ribeye.data.Macronutrients
 
 @ConsistentCopyVisibility
 public data class MacronutrientsImpl private constructor(

@@ -1,31 +1,82 @@
 package ru.it_arch.tools.samples.ribeye.storage
 
+import ru.it_arch.tools.samples.ribeye.data.Expiration
+import ru.it_arch.tools.samples.ribeye.data.Macronutrients
+import ru.it_arch.tools.samples.ribeye.data.Quantity
+import ru.it_arch.tools.samples.ribeye.data.Resource
+
 /**
  * Контейнер хранилища для разных типов ресурсов — штучных, весовых.
+ *
+ * @param T тип хранимых данных
+ * @param Q тип количества
  * */
-public sealed interface Slot<T : ResourceOld> {
+internal sealed interface Slot<T : Resource, Q: Quantity> {
 
-    public fun get(quantity: Quantity): Result<T>
+    /**
+     *
+     * @param requestQuantity
+     * @return
+     * */
+    fun get(requestQuantity: Q): Result<T>
 
-    public interface ByUnit<T : ResourceOld> : Slot<T> {
-        public val expiration: ResourceOld.Expiration
+    /**
+     * Поштучное хранение с общим сроком годности.
+     * */
+    class Piece<T: Resource>(
+        private val macronutrients: Macronutrients,
+        private val expiration: Expiration,
+        private val element: T,
+        capacity: Quantity.Piece
+    ) : Slot<T, Quantity.Piece> {
+
+        private var size = capacity
+
+        override fun get(requestQuantity: Quantity.Piece): Result<T> =
+            (size - requestQuantity).takeIf { it.isNotNegative() }
+                ?.also { size = it }
+                ?.let {
+                    // Реально отпускаемое количество может не соответствовать запрашиваемому
+                    val resultQuantity = requestQuantity
+                    Result.success(element.fork(macronutrients, resultQuantity, expiration))
+                } ?: emptySlot()
     }
 
-    public interface ByPack<T : ResourceOld> : Slot<T>
+    /** Весовое хранение с общим сроком годности. */
+    class Weight<T: Resource>(
+        private val macronutrients: Macronutrients,
+        private val expiration: Expiration,
+        private val element: T,
+        capacity: Quantity.Weight
+    ) : Slot<T, Quantity.Weight> {
 
-    public interface ByWeight<T : ResourceOld> : Slot<T> {
-        public val expiration: ResourceOld.Expiration
+        private var size = capacity
+
+        override fun get(requestQuantity: Quantity.Weight): Result<T> =
+            (size - requestQuantity).takeIf { it.isNotNegative() }
+                ?.also { size = it }
+                ?.let {
+                    // Реально отпускаемое количество может не соответствовать запрашиваемому.
+                    // Усушка, утруска, обвес и прочая складская магия :-)
+                    val resultQuantity = requestQuantity
+                    Result.success(element.fork(macronutrients, resultQuantity, expiration))
+                } ?: emptySlot()
     }
-}
 
-public class ByUnitImpl<T : ResourceOld>(
-    override val expiration: ResourceOld.Expiration,
-    private val capacity: Int
-) : Slot.ByUnit<T> {
+    /** Поштучное хранение товара в упаковке со своим сроком годности и весом/кол-вом. */
+    class Pack<T: Resource>(
+        private val capacity: Quantity.Piece
+    ) : Slot<T, Quantity.Piece> {
 
-    private val slot = ArrayDeque<T>(capacity)
+        private val slot = ArrayDeque<T>(capacity.boxed)
 
-    override fun get(quantity: Quantity): Result<T> =
-        slot.removeFirstOrNull()?.let { Result.success(it) }
-            ?: Result.failure(StorageError("Slot is empty"))
+        override fun get(requestQuantity: Quantity.Piece): Result<T> =
+            slot.removeFirstOrNull()?.let { Result.success(it) } ?: emptySlot()
+
+        fun add(resource: T): Result<Unit> =
+            resource.takeIf { slot.size < capacity.boxed }
+                ?.also(slot::add)
+                ?.let { Result.success(Unit) }
+                ?: slotOverflow()
+    }
 }

@@ -1,13 +1,13 @@
 package ru.it_arch.tools.samples.ribeye.storage.impl
 
-import ru.it_arch.tools.samples.ribeye.storage.Macronutrients
-import ru.it_arch.tools.samples.ribeye.storage.ResourceOld
+import ru.it_arch.tools.samples.ribeye.data.Macronutrients
+import ru.it_arch.tools.samples.ribeye.data.Resource
 
-public inline fun macronutrients(block: MacronutrientsImpl.Builder.() -> Unit): Macronutrients =
-    MacronutrientsImpl.Builder().apply(block).build()
+public inline fun macronutrients(block: MacronutrientsImpl.DslBuilder.() -> Unit): Macronutrients =
+    MacronutrientsImpl.DslBuilder().apply(block).build()
 
 public fun Macronutrients.toBuilder(): MacronutrientsImpl.Builder =
-    MacronutrientsImpl.Builder().apply { 
+    MacronutrientsImpl.Builder().apply {
         proteins = this@toBuilder.proteins
         fats = this@toBuilder.fats
         carbs = this@toBuilder.carbs
@@ -22,49 +22,80 @@ public fun Macronutrients.toDslBuilder(): MacronutrientsImpl.DslBuilder =
         calories = this@toDslBuilder.calories.boxed
     }
 
-public inline fun meat(block: MeatImpl.DslBuilder.() -> Unit): ResourceOld.Meat =
+// Meat
+
+public inline fun meat(block: MeatImpl.DslBuilder.() -> Unit): Resource.Meat =
     MeatImpl.DslBuilder().apply(block).build()
 
-public fun ResourceOld.Meat.toBuilder(): MeatImpl.Builder =
-    MeatImpl.Builder().apply { 
+public fun Resource.Meat.toBuilder(): MeatImpl.Builder =
+    MeatImpl.Builder().apply {
         macronutrients = this@toBuilder.macronutrients
+        quantity = this@toBuilder.quantity
         expiration = this@toBuilder.expiration
     }
 
-public fun ResourceOld.Meat.toDslBuilder(): MeatImpl.DslBuilder =
+public fun Resource.Meat.toDslBuilder(): MeatImpl.DslBuilder =
     MeatImpl.DslBuilder().apply {
         macronutrients = this@toDslBuilder.macronutrients
+        quantity = this@toDslBuilder.quantity.boxed
         expiration = this@toDslBuilder.expiration.boxed
     }
+
+// Grill
+
+public inline fun grill(block: GrillImpl.DslBuilder.() -> Unit): Resource.Grill =
+    GrillImpl.DslBuilder().apply(block).build()
+
+public fun Resource.Grill.toBuilder(): GrillImpl.Builder =
+    GrillImpl.Builder().apply {
+        macronutrients = this@toBuilder.macronutrients
+        quantity = this@toBuilder.quantity
+        expiration = this@toBuilder.expiration
+    }
+
+public fun Resource.Grill.toDslBuilder(): GrillImpl.DslBuilder =
+    GrillImpl.DslBuilder().apply {
+        macronutrients = this@toDslBuilder.macronutrients
+        quantity = this@toDslBuilder.quantity.boxed
+        expiration = this@toDslBuilder.expiration.boxed
+    }
+
+// Sauce
 
 public inline fun sauceIngredients(
     block: SauceIngredientsImpl.DslBuilder.() -> Unit
-): ResourceOld.SauceIngredients =
+): Resource.SauceIngredients =
     SauceIngredientsImpl.DslBuilder().apply(block).build()
 
-public fun ResourceOld.SauceIngredients.toBuilder(): SauceIngredientsImpl.Builder =
-    SauceIngredientsImpl.Builder().apply { 
+public fun Resource.SauceIngredients.toBuilder(): SauceIngredientsImpl.Builder =
+    SauceIngredientsImpl.Builder().apply {
         macronutrients = this@toBuilder.macronutrients
+        quantity = this@toBuilder.quantity
         expiration = this@toBuilder.expiration
     }
 
-public fun ResourceOld.SauceIngredients.toDslBuilder(): SauceIngredientsImpl.DslBuilder =
+public fun Resource.SauceIngredients.toDslBuilder(): SauceIngredientsImpl.DslBuilder =
     SauceIngredientsImpl.DslBuilder().apply {
         macronutrients = this@toDslBuilder.macronutrients
+        quantity = this@toDslBuilder.quantity.boxed
         expiration = this@toDslBuilder.expiration.boxed
     }
 
-public inline fun rosematy(block: RosemaryImpl.DslBuilder.() -> Unit): ResourceOld.Rosemary =
+// Rosemary
+
+public inline fun rosemary(block: RosemaryImpl.DslBuilder.() -> Unit): Resource.Rosemary =
     RosemaryImpl.DslBuilder().apply(block).build()
 
-public fun ResourceOld.Rosemary.toBuilder(): RosemaryImpl.Builder =
-    RosemaryImpl.Builder().apply { 
+public fun Resource.Rosemary.toBuilder(): RosemaryImpl.Builder =
+    RosemaryImpl.Builder().apply {
         macronutrients = this@toBuilder.macronutrients
+        quantity = this@toBuilder.quantity
         expiration = this@toBuilder.expiration
     }
 
-public fun ResourceOld.Rosemary.toDslBuilder(): RosemaryImpl.DslBuilder =
+public fun Resource.Rosemary.toDslBuilder(): RosemaryImpl.DslBuilder =
     RosemaryImpl.DslBuilder().apply {
         macronutrients = this@toDslBuilder.macronutrients
+        quantity = this@toDslBuilder.quantity.boxed
         expiration = this@toDslBuilder.expiration.boxed
     }

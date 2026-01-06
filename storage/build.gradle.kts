@@ -15,6 +15,5 @@ kotlin {
 }
 
 dependencies {
-    api(libs.k3dm)
-    api(libs.kotlinx.datetime)
+    api(project(":api"))
 }
