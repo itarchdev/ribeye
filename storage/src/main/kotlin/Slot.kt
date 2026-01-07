@@ -90,7 +90,7 @@ internal sealed interface Slot {
          * @param request запрашиваемое количество
          * @return результат поиска
          * */
-        private infix fun String.quantityIsNotLessThan(request: Int): Boolean =
+        infix fun String.quantityIsNotLessThan(request: Int): Boolean =
             FIND_QUNTITY_RE.find(this)?.groupValues?.get(1)?.toIntOrNull()?.let { it >= request }
                 ?: false
 

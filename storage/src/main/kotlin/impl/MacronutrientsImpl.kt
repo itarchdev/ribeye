@@ -1,9 +1,22 @@
 package ru.it_arch.tools.samples.ribeye.storage.impl
 
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.descriptors.element
+import kotlinx.serialization.encoding.CompositeDecoder.Companion.DECODE_DONE
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.encoding.decodeStructure
+import kotlinx.serialization.encoding.encodeStructure
 import ru.it_arch.k3dm.ValueObject
 import ru.it_arch.tools.samples.ribeye.data.Macronutrients
 
 @ConsistentCopyVisibility
+@Serializable(with = MacronutrientsImpl.Companion::class)
 public data class MacronutrientsImpl private constructor(
     override val proteins: Macronutrients.Proteins,
     override val fats: Macronutrients.Fats,
@@ -153,12 +166,50 @@ public data class MacronutrientsImpl private constructor(
         }
     }
 
-    public companion object {
+    @OptIn(ExperimentalSerializationApi::class)
+    public companion object : KSerializer<MacronutrientsImpl> {
         public val DEFAULT: Macronutrients = MacronutrientsImpl(
             ProteinsImpl.DEFAULT,
             FatsImpl.DEFAULT,
             CarbohydratesImpl.DEFAULT,
             KcalImpl.DEFAULT
         )
+
+        override val descriptor: SerialDescriptor =
+            buildClassSerialDescriptor(MacronutrientsImpl::class.java.name) {
+                element<Double>("proteins")
+                element<Double>("fats")
+                element<Double>("carbs")
+                element<Double>("calories")
+            }
+
+        override fun serialize(encoder: Encoder, value: MacronutrientsImpl) {
+            encoder.encodeStructure(descriptor) {
+                encodeDoubleElement(descriptor, 0, value.proteins.boxed)
+                encodeDoubleElement(descriptor, 1, value.fats.boxed)
+                encodeDoubleElement(descriptor, 2, value.carbs.boxed)
+                encodeDoubleElement(descriptor, 3, value.calories.boxed)
+            }
+        }
+
+        override fun deserialize(decoder: Decoder): MacronutrientsImpl =
+            decoder.decodeStructure(descriptor) {
+                Builder().apply {
+                    loop@ while (true) {
+                        when (val i = decodeElementIndex(descriptor)) {
+                            0 -> proteins = decodeDoubleElement(descriptor, 0)
+                                .let { ProteinsImpl(it) }
+                            1 -> fats = decodeDoubleElement(descriptor, 1)
+                                .let { FatsImpl(it) }
+                            2 -> carbs = decodeDoubleElement(descriptor, 2)
+                                .let { CarbohydratesImpl(it) }
+                            3 -> calories = decodeDoubleElement(descriptor, 3)
+                                .let { KcalImpl(it) }
+                            DECODE_DONE -> break@loop
+                            else -> throw SerializationException("Unexpected index $i")
+                        }
+                    }
+                }.build() as MacronutrientsImpl
+            }
     }
 }

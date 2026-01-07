@@ -1,7 +1,32 @@
 package ru.it_arch.tools.samples.ribeye.storage.impl
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 import ru.it_arch.tools.samples.ribeye.data.Macronutrients
 import ru.it_arch.tools.samples.ribeye.data.Resource
+
+internal val json = Json {
+    prettyPrint = true
+    serializersModule = SerializersModule {
+        polymorphic(Macronutrients::class) {
+            subclass(MacronutrientsImpl::class)
+        }
+        polymorphic(Resource.Meat::class) {
+            subclass(MeatImpl::class)
+        }
+        polymorphic(Resource.Grill::class) {
+            subclass(GrillImpl::class)
+        }
+        polymorphic(Resource.SauceIngredients::class) {
+            subclass(SauceIngredientsImpl::class)
+        }
+        polymorphic(Resource.Rosemary::class) {
+            subclass(RosemaryImpl::class)
+        }
+    }
+}
 
 public inline fun macronutrients(block: MacronutrientsImpl.DslBuilder.() -> Unit): Macronutrients =
     MacronutrientsImpl.DslBuilder().apply(block).build()
@@ -22,9 +47,11 @@ public fun Macronutrients.toDslBuilder(): MacronutrientsImpl.DslBuilder =
         calories = this@toDslBuilder.calories.boxed
     }
 
-public fun Macronutrients.toJson(): String = TODO()
+public fun Macronutrients.format(): String =
+    json.encodeToString(this)
 
-public fun String.macronutrientsFromJson(): Macronutrients = TODO()
+public fun String.toMacronutrients(): Macronutrients =
+    json.decodeFromString(this)
 
 // Meat
 
@@ -45,10 +72,11 @@ public fun Resource.Meat.toDslBuilder(): MeatImpl.DslBuilder =
         expiration = this@toDslBuilder.expiration.boxed
     }
 
-public fun Resource.Meat.toJson(): String =
-    TODO()
+public fun Resource.Meat.format(): String =
+    json.encodeToString(this)
 
-public fun String.meatFromJson(): Resource.Meat = TODO()
+public fun String.toMeat(): Resource.Meat =
+    json.decodeFromString(this)
 
 // Grill
 
@@ -69,9 +97,11 @@ public fun Resource.Grill.toDslBuilder(): GrillImpl.DslBuilder =
         expiration = this@toDslBuilder.expiration.boxed
     }
 
-public fun Resource.Grill.toJson(): String = TODO()
+public fun Resource.Grill.format(): String =
+    json.encodeToString(this)
 
-public fun String.grillFromJson(): Resource.Grill = TODO()
+public fun String.toGrill(): Resource.Grill =
+    json.decodeFromString(this)
 
 // Sauce
 
@@ -94,9 +124,11 @@ public fun Resource.SauceIngredients.toDslBuilder(): SauceIngredientsImpl.DslBui
         expiration = this@toDslBuilder.expiration.boxed
     }
 
-public fun Resource.SauceIngredients.toJson(): String = TODO()
+public fun Resource.SauceIngredients.format(): String =
+    json.encodeToString(this)
 
-public fun String.sauceFromJson(): Resource.SauceIngredients = TODO()
+public fun String.toSauceIngredients(): Resource.SauceIngredients =
+    json.decodeFromString(this)
 
 // Rosemary
 
@@ -117,6 +149,8 @@ public fun Resource.Rosemary.toDslBuilder(): RosemaryImpl.DslBuilder =
         expiration = this@toDslBuilder.expiration.boxed
     }
 
-public fun Resource.Rosemary.toJson(): String = TODO()
+public fun Resource.Rosemary.format(): String =
+    json.encodeToString(this)
 
-public fun String.rosemaryFromJson(): Resource.Rosemary = TODO()
+public fun String.toRosemary(): Resource.Rosemary =
+    json.decodeFromString(this)

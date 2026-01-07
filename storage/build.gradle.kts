@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 plugins {
     `java-library`
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -16,4 +17,5 @@ kotlin {
 
 dependencies {
     api(project(":api"))
+    implementation(libs.kotlinx.serialization.json)
 }
