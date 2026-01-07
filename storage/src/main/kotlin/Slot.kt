@@ -1,5 +1,8 @@
 package ru.it_arch.tools.samples.ribeye.storage
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
 /**
  * Типонезависимый контейнер хранилища для разных видов ресурсов — штучных, весовых.
  * Внутренее представление — строковое, по факту — JSON, но контейнер не должен знать о фактическом
@@ -12,7 +15,7 @@ internal sealed interface Slot {
      * @param requestQuantity
      * @return
      * */
-    fun get(requestQuantity: String): Result<String>
+    suspend fun get(requestQuantity: String): Result<String>
 
     /**
      * Поштучное хранение с общим сроком годности.
@@ -27,15 +30,17 @@ internal sealed interface Slot {
 
         private var size = capacity
 
-        override fun get(requestQuantity: String): Result<String> =
-            (size - requestQuantity.toInt()).takeIf { it >= 0 }
-                ?.also { size = it }
-                ?.let {
-                    // Реально отпускаемое количество может не соответствовать запрашиваемому.
-                    // Здесь можно подменить это значение и потом решать вопрос с ревизией
-                    val resultQuantity = requestQuantity
-                    Result.success(buildJson(macronutrients, resultQuantity, expiration))
-                } ?: emptySlot()
+        override suspend fun get(requestQuantity: String): Result<String> =
+            withContext(Dispatchers.Default) {
+                (size - requestQuantity.toInt()).takeIf { it >= 0 }
+                    ?.also { size = it }
+                    ?.let {
+                        // Реально отпускаемое количество может не соответствовать запрашиваемому.
+                        // Здесь можно подменить это значение и потом решать вопрос с ревизией
+                        val resultQuantity = requestQuantity
+                        Result.success(buildJson(macronutrients, resultQuantity, expiration))
+                    } ?: emptySlot()
+            }
     }
 
     /** Весовое хранение с общим сроком годности. */
@@ -49,15 +54,17 @@ internal sealed interface Slot {
 
         private var size = capacity
 
-        override fun get(requestQuantity: String): Result<String> =
-            (size - requestQuantity.toLong()).takeIf { it >= 0 }
-                ?.also { size = it }
-                ?.let {
-                    // Реально отпускаемое количество может не соответствовать запрашиваемому.
-                    // Усушка, утруска, обвес и прочая складская магия :-)
-                    val resultQuantity = requestQuantity
-                    Result.success(buildJson(macronutrients, resultQuantity, expiration))
-                } ?: emptySlot()
+        override suspend fun get(requestQuantity: String): Result<String> =
+            withContext(Dispatchers.Default) {
+                (size - requestQuantity.toLong()).takeIf { it >= 0 }
+                    ?.also { size = it }
+                    ?.let {
+                        // Реально отпускаемое количество может не соответствовать запрашиваемому.
+                        // Усушка, утруска, обвес и прочая складская магия :-)
+                        val resultQuantity = requestQuantity
+                        Result.success(buildJson(macronutrients, resultQuantity, expiration))
+                    } ?: emptySlot()
+            }
     }
 
     /** Поштучное хранение ресурса в упаковке со своим сроком годности и весом/кол-вом. */
@@ -70,14 +77,16 @@ internal sealed interface Slot {
         /**
          * Получение
          * */
-        override fun get(requestQuantity: String): Result<String> =
-            // Найти подходящий ресурс в слоте по критерию веса — большего или равным запрашиваемому
-            // и извлечь его из слота
-            requestQuantity.toIntOrNull()?.let { intQuantity ->
-                slot.firstOrNull { it quantityIsNotLessThan intQuantity }
-                    ?.let { el -> Result.success(el).also { slot.remove(el) } }
-                    ?: emptySlot()
-            } ?: error("request quantity must be Int")
+        override suspend fun get(requestQuantity: String): Result<String> =
+            withContext(Dispatchers.Default) {
+                // Найти подходящий ресурс в слоте по критерию веса — большего или равным запрашиваемому
+                // и извлечь его из слота
+                requestQuantity.toIntOrNull()?.let { intQuantity ->
+                    slot.firstOrNull { it quantityIsNotLessThan intQuantity }
+                        ?.let { el -> Result.success(el).also { slot.remove(el) } }
+                        ?: emptySlot()
+                } ?: error("request quantity must be Int")
+            }
 
         fun add(resource: String): Result<Unit> =
             resource.takeIf { slot.size < capacity }

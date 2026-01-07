@@ -21,25 +21,33 @@ public class Storage(
     private val slots: MutableMap<KClass<out Resource>, Slot> = mutableMapOf()
 
     @Suppress("UNCHECKED_CAST")
-    override fun <T : Resource, Q : Quantity> getByType(type: KClass<out T>, requestQuantity: Q): Result<T> =
-        when(type) {
+    override suspend fun <T : Resource, Q : Quantity> getByType(
+        type: KClass<out T>,
+        requestQuantity: Q
+    ): Result<T> =
+        when (type) {
             Resource.Meat::class -> slots[type]?.takeIf { it is Slot.Pack }
                 ?.let { slot -> slot.get(requestQuantity.toString()).map { it.toMeat() as T } }
                 ?: notFound(type)
+
             Resource.Grill::class -> slots[type]?.takeIf { it is Slot.Weight }
                 ?.let { slot -> slot.get(requestQuantity.toString()).map { it.toGrill() as T } }
                 ?: notFound(type)
+
             Resource.SauceIngredients::class -> slots[type]?.takeIf { it is Slot.Weight }
-                ?.let { slot -> slot.get(requestQuantity.toString()).map { it.toSauceIngredients() as T } }
+                ?.let { slot ->
+                    slot.get(requestQuantity.toString()).map { it.toSauceIngredients() as T }
+                }
                 ?: notFound(type)
+
             Resource.Rosemary::class -> slots[type]?.takeIf { it is Slot.Piece }
                 ?.let { slot -> slot.get(requestQuantity.toString()).map { it.toRosemary() as T } }
                 ?: notFound(type)
+
             else -> error("Unknown resource type: ${type.simpleName}")
         }
 
-    // always new slot ?
-    override fun <T : Resource> putByType(type: KClass<out T>, resource: T): Result<Unit> =
+    override suspend fun <T : Resource> putByType(type: KClass<out T>, resource: T): Result<Unit> =
         when(type) {
             // Используем имеющийся слот, если есть
             Resource.Meat::class -> (resource as Resource.Meat)
@@ -59,6 +67,7 @@ public class Storage(
                 }
                 .also { slots[type] = it }
                 .let { Result.success(Unit) }
+
             Resource.SauceIngredients::class -> (resource as Resource.SauceIngredients)
                 .let { sauce ->
                     Slot.Weight(
@@ -69,6 +78,7 @@ public class Storage(
                 }
                 .also { slots[type] = it }
                 .let { Result.success(Unit) }
+
             Resource.Rosemary::class -> (resource as Resource.Rosemary)
                 .let { rosemary ->
                     Slot.Piece(
@@ -79,6 +89,7 @@ public class Storage(
                 }
                 .also { slots[type] = it }
                 .let { Result.success(Unit) }
+
             else -> error("Unknown resource type: ${type.simpleName}")
         }
 }
