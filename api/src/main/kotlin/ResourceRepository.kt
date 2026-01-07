@@ -13,7 +13,7 @@ public interface ResourceRepository {
      * @param requestQuantity требуемое количество
      * @return [Result] конкретного ресурса [Resource] или ошибка получения
      * */
-    public fun <T : Resource> getByType(type: KClass<out T>, requestQuantity: Quantity): Result<T>
+    public fun <T : Resource, Q : Quantity> getByType(type: KClass<out T>, requestQuantity: Q): Result<T>
 
     /**
      * Добавление ресурса [Resource]
