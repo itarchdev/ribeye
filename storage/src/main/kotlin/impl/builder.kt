@@ -22,6 +22,10 @@ public fun Macronutrients.toDslBuilder(): MacronutrientsImpl.DslBuilder =
         calories = this@toDslBuilder.calories.boxed
     }
 
+public fun Macronutrients.toJson(): String = TODO()
+
+public fun String.macronutrientsFromJson(): Macronutrients = TODO()
+
 // Meat
 
 public inline fun meat(block: MeatImpl.DslBuilder.() -> Unit): Resource.Meat =
@@ -41,6 +45,11 @@ public fun Resource.Meat.toDslBuilder(): MeatImpl.DslBuilder =
         expiration = this@toDslBuilder.expiration.boxed
     }
 
+public fun Resource.Meat.toJson(): String =
+    TODO()
+
+public fun String.meatFromJson(): Resource.Meat = TODO()
+
 // Grill
 
 public inline fun grill(block: GrillImpl.DslBuilder.() -> Unit): Resource.Grill =
@@ -59,6 +68,10 @@ public fun Resource.Grill.toDslBuilder(): GrillImpl.DslBuilder =
         quantity = this@toDslBuilder.quantity.boxed
         expiration = this@toDslBuilder.expiration.boxed
     }
+
+public fun Resource.Grill.toJson(): String = TODO()
+
+public fun String.grillFromJson(): Resource.Grill = TODO()
 
 // Sauce
 
@@ -81,6 +94,10 @@ public fun Resource.SauceIngredients.toDslBuilder(): SauceIngredientsImpl.DslBui
         expiration = this@toDslBuilder.expiration.boxed
     }
 
+public fun Resource.SauceIngredients.toJson(): String = TODO()
+
+public fun String.sauceFromJson(): Resource.SauceIngredients = TODO()
+
 // Rosemary
 
 public inline fun rosemary(block: RosemaryImpl.DslBuilder.() -> Unit): Resource.Rosemary =
@@ -99,3 +116,7 @@ public fun Resource.Rosemary.toDslBuilder(): RosemaryImpl.DslBuilder =
         quantity = this@toDslBuilder.quantity.boxed
         expiration = this@toDslBuilder.expiration.boxed
     }
+
+public fun Resource.Rosemary.toJson(): String = TODO()
+
+public fun String.rosemaryFromJson(): Resource.Rosemary = TODO()

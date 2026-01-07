@@ -5,7 +5,7 @@ import ru.it_arch.tools.samples.ribeye.data.Resource
 public inline fun <reified T : Resource> notFound(): Result<T> =
     Result.failure(StorageError("Resource ${T::class.simpleName} not found"))
 
-internal fun <T : Resource> emptySlot(): Result<T> =
+internal fun emptySlot(): Result<String> =
     Result.failure((StorageError("Slot is empty")))
 
 internal fun slotOverflow(): Result<Unit> =
