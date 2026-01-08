@@ -1,5 +1,6 @@
 package ru.it_arch.tools.samples.ribeye.storage
 
+import kotlinx.coroutines.sync.Mutex
 import ru.it_arch.tools.samples.ribeye.ResourceRepository
 import ru.it_arch.tools.samples.ribeye.data.Quantity
 import ru.it_arch.tools.samples.ribeye.data.Resource
@@ -18,8 +19,9 @@ public class Storage(
     private val rosemarySlotCapacity: Quantity.Piece
 ) : ResourceRepository {
 
+    private val mutex = Mutex()
     /** Ленивая инициализация слота при добавлении ресурса */
-    internal val slots: MutableMap<KClass<out Resource>, Slot> = mutableMapOf()
+    private val slots: MutableMap<KClass<out Resource>, Slot> = mutableMapOf()
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun <T : Resource, Q : Quantity> getByType(
@@ -28,21 +30,24 @@ public class Storage(
     ): Result<T> =
         when (type) {
             Resource.Meat::class -> slots[type]?.takeIf { it is Slot.Pack }
-                ?.let { slot -> slot.get(requestQuantity.toString()).map { it.toMeat() as T } }
-                ?: notFound(type)
+                ?.let { slot -> (slot as Slot.Pack).get(requestQuantity.toString())
+                    .map { it.second.toMeat() as T }
+                } ?: notFound(type)
 
             Resource.Grill::class -> slots[type]?.takeIf { it is Slot.Weight }
-                ?.let { slot -> slot.get(requestQuantity.toString()).map { it.toGrill() as T } }
-                ?: notFound(type)
+                ?.let { slot -> (slot as Slot.Weight).get(requestQuantity.toString())
+                    .map { it.toGrill() as T }
+                } ?: notFound(type)
 
             Resource.SauceIngredients::class -> slots[type]?.takeIf { it is Slot.Weight }
-                ?.let { slot ->
-                    slot.get(requestQuantity.toString()).map { it.toSauceIngredients() as T }
+                ?.let { slot -> (slot as Slot.Weight).get(requestQuantity.toString())
+                    .map { it.toSauceIngredients() as T }
                 } ?: notFound(type)
 
             Resource.Rosemary::class -> slots[type]?.takeIf { it is Slot.Piece }
-                ?.let { slot -> slot.get(requestQuantity.toString()).map { it.toRosemary() as T } }
-                ?: notFound(type)
+                ?.let { slot -> (slot as Slot.Piece).get(requestQuantity.toString())
+                    .map { it.toRosemary() as T }
+                } ?: notFound(type)
 
             else -> error("Unknown resource type: ${type.simpleName}")
         }
@@ -54,7 +59,7 @@ public class Storage(
                 .let { meat ->
                     (slots[type]?.takeIf { it is Slot.Pack }?.let { it as Slot.Pack } ?: run {
                         Slot.Pack(meatSlotCapacity.boxed).also { slots[type] = it }
-                    }).add(meat.format())
+                    }).add(meat.format()).map { Unit }
                 }
             // старое выкидываем, создавая новый слот под новый срок хранения
             Resource.Grill::class -> (resource as Resource.Grill)

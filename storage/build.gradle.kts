@@ -37,6 +37,7 @@ dependencies {
     api(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
 
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotest)
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.kotest.htmlreporter)

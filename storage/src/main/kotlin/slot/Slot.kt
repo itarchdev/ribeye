@@ -1,9 +1,14 @@
 package ru.it_arch.tools.samples.ribeye.storage.slot
 
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import ru.it_arch.tools.samples.ribeye.storage.StorageError
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.time.Instant
 
 /**
@@ -14,46 +19,79 @@ import kotlin.time.Instant
  * */
 internal sealed interface Slot {
 
+    /** Вынесен с целью замены для Unit-тестов. По умолчанию — [Dispatchers.Default] */
+    val dispatcher: CoroutineDispatcher
+
     /** текущая заполненность слота */
     suspend fun size(): Number
 
     /**
+     * Одноразовый слот, заменямый вместе с новым содержимым. Состояние ЖЦ определяется флагом [isActive]
      *
-     * @param requestQuantity
-     * @return
+     * @param macronutrients строковое представление (JSON) КБЖУ
+     * @param expiration строковое представление срока годности ([Instant])
+     * @param capacity максимальный размер слота
      * */
-    suspend fun get(requestQuantity: String): Result<String>
+    sealed class Disposable(
+        protected val macronutrients: String,
+        protected val expiration: Instant,
+        protected val capacity: Number,
+    ) : Slot {
 
-    fun kill()
+        /** Состояние слота. Необходим для предотвращения доступа к убитому слоту при конкурентном обретении слота */
+        @Volatile
+        protected var isActive = true
+        protected val mutex = Mutex()
+
+        fun kill() {
+            isActive = false
+        }
+
+        /**
+         *
+         * @param requestQuantity
+         * @return
+         * */
+        abstract suspend fun get(requestQuantity: String): Result<String>
+    }
+
+    /**
+     * Переиспользуемый слот. Состояние ЖЦ определяется сквозной версией [currentVersion]
+     *
+     *
+     * */
+    @OptIn(ExperimentalAtomicApi::class)
+    sealed class Reusable() : Slot {
+        protected val mutex = Mutex()
+        protected val version = AtomicInt(0)
+        val currentVersion: Int
+            get() = version.load()
+
+        abstract suspend fun get(requestQuantity: String): Result<Pair<Int, String>>
+
+        abstract suspend fun add(resource: String): Result<Int>
+    }
 
     /**
      * Поштучное хранение с общим сроком годности.
      * */
     class Piece(
-        /** JSON */
-        private val macronutrients: String,
-        /** Instant */
-        private val expiration: Instant,
-        capacity: Int
-    ) : Slot {
+        macronutrients: String,
+        expiration: Instant,
+        capacity: Int,
+        override val dispatcher: CoroutineDispatcher = Dispatchers.Default
+    ) : Disposable(macronutrients, expiration, capacity) {
 
-        @Volatile
-        private var isActive = true
-        private val mutex = Mutex()
-        private var _size = capacity
+        private var _size: Int = capacity
 
-        override fun kill() {
-            isActive = false
-        }
-
-        override suspend fun size(): Int = withContext(Dispatchers.Default) {
+        override suspend fun size(): Int = withContext(dispatcher) {
             check(isActive) { INACTIVE_MESSAGE }
             mutex.withLock { _size }
         }
 
         override suspend fun get(requestQuantity: String): Result<String> {
             check(isActive) { INACTIVE_MESSAGE }
-            return withContext(Dispatchers.Default) {
+            return withContext(dispatcher) {
                 // Sic! Двойная проверка для строгости
                 check(isActive) { INACTIVE_MESSAGE }
                 mutex.withLock {
@@ -78,28 +116,21 @@ internal sealed interface Slot {
 
     /** Весовое хранение с общим сроком годности. */
     class Weight(
-        /** JSON */
-        private val macronutrients: String,
-        /** Instant */
-        private val expiration: Instant,
-        capacity: Long
-    ) : Slot {
+        macronutrients: String,
+        expiration: Instant,
+        capacity: Long,
+        override val dispatcher: CoroutineDispatcher = Dispatchers.Default
+    ) : Disposable(macronutrients, expiration, capacity) {
 
-        @Volatile
-        private var isActive = true
-        private val mutex = Mutex()
-        private var _size = capacity
+        private var _size: Long = capacity
 
-        override fun kill() {
-            isActive = false
-        }
-
-        override suspend fun size(): Long =
+        override suspend fun size(): Long = withContext(dispatcher) {
             mutex.withLock { _size }
+        }
 
         override suspend fun get(requestQuantity: String): Result<String> {
             check(isActive) { INACTIVE_MESSAGE }
-            return withContext(Dispatchers.Default) {
+            return withContext(dispatcher) {
                 // Sic! Двойная проверка для строгости
                 check(isActive) { INACTIVE_MESSAGE }
                 mutex.withLock {
@@ -123,54 +154,42 @@ internal sealed interface Slot {
     }
 
     /** Поштучное хранение ресурса в упаковке со своим сроком годности и весом/кол-вом. */
+    @OptIn(ExperimentalAtomicApi::class)
     class Pack(
-        private val capacity: Int
-    ) : Slot {
+        private val capacity: Int,
+        override val dispatcher: CoroutineDispatcher = Dispatchers.Default
+    ) : Reusable() {
 
-        @Volatile
-        private var isActive = true
-
-        private val mutex = Mutex()
         private val slot = ArrayDeque<String>(capacity)
 
-        override fun kill() {
-            isActive = false
-        }
-
-        override suspend fun size(): Int {
-            check(isActive) { INACTIVE_MESSAGE }
-            return mutex.withLock { slot.size }
+        override suspend fun size(): Int = withContext(dispatcher) {
+            mutex.withLock { slot.size }
         }
 
         /**
          * Получение
          * */
-        override suspend fun get(requestQuantity: String): Result<String> {
-            check(isActive) { INACTIVE_MESSAGE }
-            return withContext(Dispatchers.Default) {
-                check(isActive) { INACTIVE_MESSAGE }
+        override suspend fun get(requestQuantity: String): Result<Pair<Int, String>> =
+            withContext(dispatcher) {
                 mutex.withLock {
                     // Найти подходящий ресурс в слоте по критерию веса — большего или равным запрашиваемому
                     // и извлечь его из слота
                     requestQuantity.toIntOrNull()?.let { intQuantity ->
                         slot.firstOrNull { it quantityIsNotLessThan intQuantity }
-                            ?.let { el -> Result.success(el).also { slot.remove(el) } }
-                            ?: emptySlot()
+                            ?.let { el ->
+                                Result.success(version.incrementAndFetch() to el)
+                                    .also { slot.remove(el) }
+                            } ?: Result.failure((StorageError("Slot is empty")))
                     } ?: error("request quantity must be Int")
                 }
             }
-        }
 
-        suspend fun add(resource: String): Result<Unit> {
-            check(isActive) { INACTIVE_MESSAGE }
-            return withContext(Dispatchers.Default) {
-                check(isActive) { INACTIVE_MESSAGE }
-                mutex.withLock {
-                    resource.takeIf { slot.size < capacity }
-                        ?.also(slot::add)
-                        ?.let { Result.success(Unit) }
-                        ?: slotOverflow()
-                }
+        override suspend fun add(resource: String): Result<Int> = withContext(dispatcher) {
+            mutex.withLock {
+                resource.takeIf { slot.size < capacity }
+                    ?.also(slot::add)
+                    ?.let { Result.success(version.incrementAndFetch()) }
+                    ?: slotOverflow()
             }
         }
 

@@ -1,5 +1,6 @@
 package ru.it_arch.tools.samples.ribeye.storage.slot
 
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.comparables.shouldNotBeLessThan
@@ -8,9 +9,17 @@ import io.kotest.matchers.shouldBe
 import io.kotest.provided.neg
 import io.kotest.provided.pos
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
 import ru.it_arch.tools.samples.ribeye.storage.impl.QuantityWeightImpl
 import ru.it_arch.tools.samples.ribeye.storage.impl.format
 import ru.it_arch.tools.samples.ribeye.storage.impl.macronutrients
@@ -25,7 +34,7 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 
-@OptIn(ExperimentalKotest::class)
+@OptIn(ExperimentalKotest::class, ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
 class SlotTest : FunSpec({
 
     val rosemary = rosemary {
@@ -93,6 +102,38 @@ class SlotTest : FunSpec({
             }
         }
 
+        /* Стратегия тестирования двойной проверки активного состояния слота.
+        1. Первая проверка `check(isActive)`: вызов `slot.get()` и старт `withContext` в StandardTestDispatcher.
+        2. Окно между помещением корутины в очередь StandardTestDispatcher, паузой и ее выполнением.
+        3. Убиваем слот вызовом `slot.kill()`: isActive = false.
+        4. Запуск помещенной в очередь корутины: дергаем StandardTestDispatcher на продолжение выполнения.
+        5. Вторая проверка `check(isActive)`: теперь должна выкинуть исключение. */
+        pos("Double-checking must catch IllegalStateException during the dispatch gap") {
+            // StandardTestDispatcher для ручного контроля выполнения
+            val testDispatcher = StandardTestDispatcher()
+            val slot = Slot.Piece(
+                rosemary.macronutrients.format(),
+                rosemary.expiration.boxed,
+                capacity,
+                testDispatcher
+            )
+            runTest(testDispatcher) {
+                // Используем SupervisorJob и async/await, чтобы ожидаемое исключение
+                // IllegalStateException не порушило тест сразу — в соответствии со structured concurrency
+                val deferred = async(SupervisorJob()) {
+                    slot.get("1") // 1. Первый вызов `check(isActive)`
+                }
+                // 2. Окно возможности: корутина `withContext` ждет в очереди на паузе.
+                // Сбрасываем флаг активности до того, как testDispatcher начнет выполнять корутину
+                slot.kill() // 3. isActive = false
+                advanceUntilIdle() // 4. Дергаем testDispatcher на выполнение корутины `withContext`
+
+                shouldThrow<IllegalStateException> {
+                    deferred.await() // 5. На втором вызове `check(isActive)` выкинется исключение, т.к. isActive уже false
+                }
+            }
+        }
+
         pos("Slot must return JSON representation of expected Rosemary object") {
             // Достаточно проверить первый элемент выдачи и удедиться, что его можно десериализовать
             rosemary.toDslBuilder().apply { quantity = requestQuantity }.build().also { expected ->
@@ -133,6 +174,38 @@ class SlotTest : FunSpec({
 
             pos("Remain slot size ${slot.size()} must be >= 0 and < $requestQuantity") {
                 slot.size() shouldBeInRange 0..<requestQuantity
+            }
+        }
+
+        /* Стратегия тестирования двойной проверки активного состояния слота.
+        1. Первая проверка `check(isActive)`: вызов `slot.get()` и старт `withContext` в StandardTestDispatcher.
+        2. Окно между помещением корутины в очередь StandardTestDispatcher, паузой и ее выполнением.
+        3. Убиваем слот вызовом `slot.kill()`: isActive = false.
+        4. Запуск помещенной в очередь корутины: дергаем StandardTestDispatcher на продолжение выполнения.
+        5. Вторая проверка `check(isActive)`: теперь должна выкинуть исключение. */
+        pos("Double-checking must catch IllegalStateException during the dispatch gap") {
+            // StandardTestDispatcher для ручного контроля выполнения
+            val testDispatcher = StandardTestDispatcher()
+            val slot = Slot.Weight(
+                sauceIngredients.macronutrients.format(),
+                sauceIngredients.expiration.boxed,
+                capacity,
+                testDispatcher
+            )
+            runTest(testDispatcher) {
+                // Используем SupervisorJob и async/await, чтобы ожидаемое исключение
+                // IllegalStateException не порушило тест сразу — в соответствии со structured concurrency
+                val deferred = async(SupervisorJob()) {
+                    slot.get("300") // 1. Первый вызов `check(isActive)`
+                }
+                // 2. Окно возможности: корутина `withContext` ждет в очереди на паузе.
+                // Сбрасываем флаг активности до того, как testDispatcher начнет выполнять корутину
+                slot.kill() // 3. isActive = false
+                advanceUntilIdle() // 4. Дергаем testDispatcher на выполнение корутины `withContext`
+
+                shouldThrow<IllegalStateException> {
+                    deferred.await() // 5. На втором вызове `check(isActive)` выкинется исключение, т.к. isActive уже false
+                }
             }
         }
 
@@ -189,7 +262,7 @@ class SlotTest : FunSpec({
                 meat.toDslBuilder().apply { quantity = 400 }.build().format().also { add(it) }
                 meat.toDslBuilder().apply { quantity = 320 }.build().format().also { add(it) }
             }
-            slot.get("350").getOrThrow().toMeat().quantity shouldNotBeLessThan QuantityWeightImpl.Companion(
+            slot.get("350").getOrThrow().second.toMeat().quantity shouldNotBeLessThan QuantityWeightImpl.Companion(
                 350
             )
         }
