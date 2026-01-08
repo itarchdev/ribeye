@@ -1,9 +1,10 @@
-package ru.it_arch.tools.samples.ribeye.storage
+package ru.it_arch.tools.samples.ribeye.storage.slot
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlin.time.Instant
 
 /**
  * Типонезависимый контейнер (слот) хранилища для разных видов ресурсов — упакованных, штучных, весовых.
@@ -30,7 +31,7 @@ internal sealed interface Slot {
         /** JSON */
         private val macronutrients: String,
         /** Instant */
-        private val expiration: String,
+        private val expiration: Instant,
         capacity: Int
     ) : Slot {
 
@@ -48,7 +49,13 @@ internal sealed interface Slot {
                             // Реально отпускаемое количество может не соответствовать запрашиваемому.
                             // Здесь можно подменить это значение и потом решать вопрос с ревизией
                             val resultQuantity = requestQuantity
-                            Result.success(buildResponse(macronutrients, resultQuantity, expiration))
+                            Result.success(
+                                buildResponse(
+                                    macronutrients,
+                                    resultQuantity,
+                                    expiration
+                                )
+                            )
                         } ?: emptySlot()
                 }
             }
@@ -59,7 +66,7 @@ internal sealed interface Slot {
         /** JSON */
         private val macronutrients: String,
         /** Instant */
-        private val expiration: String,
+        private val expiration: Instant,
         capacity: Long
     ) : Slot {
 
@@ -77,7 +84,13 @@ internal sealed interface Slot {
                             // Реально отпускаемое количество может не соответствовать запрашиваемому.
                             // Усушка, утруска, обвес и прочая складская магия :-)
                             val resultQuantity = requestQuantity
-                            Result.success(buildResponse(macronutrients, resultQuantity, expiration))
+                            Result.success(
+                                buildResponse(
+                                    macronutrients,
+                                    resultQuantity,
+                                    expiration
+                                )
+                            )
                         } ?: emptySlot()
                 }
             }
@@ -150,9 +163,9 @@ internal sealed interface Slot {
          *  Полагается, что слоты хранят элементы в виде строки (JSON).
          *  Реальное хранение заменяется генерацией элемента .
          */
-        fun buildResponse(macronutrients: String, quantity: String, expiration: String): String =
+        fun buildResponse(macronutrients: String, quantity: String, expiration: Instant): String =
             RESOURCE_TEMPLATE.replace(MACRONUTRIENTS_PLACEHOLDER, macronutrients)
                 .replace(QUANTITY_PLACEHOLDER, quantity)
-                .replace(EXPIRATION_PLACEHOLDER, expiration)
+                .replace(EXPIRATION_PLACEHOLDER, expiration.toString())
     }
 }

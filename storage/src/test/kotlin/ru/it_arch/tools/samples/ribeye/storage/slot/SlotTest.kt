@@ -1,7 +1,8 @@
-package ru.it_arch.tools.samples.ribeye.storage
+package ru.it_arch.tools.samples.ribeye.storage.slot
 
 import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.comparables.shouldNotBeLessThan
 import io.kotest.matchers.longs.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import io.kotest.provided.neg
@@ -10,15 +11,19 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import ru.it_arch.tools.samples.ribeye.storage.impl.QuantityWeightImpl
 import ru.it_arch.tools.samples.ribeye.storage.impl.format
 import ru.it_arch.tools.samples.ribeye.storage.impl.macronutrients
+import ru.it_arch.tools.samples.ribeye.storage.impl.meat
 import ru.it_arch.tools.samples.ribeye.storage.impl.rosemary
 import ru.it_arch.tools.samples.ribeye.storage.impl.sauceIngredients
 import ru.it_arch.tools.samples.ribeye.storage.impl.toDslBuilder
+import ru.it_arch.tools.samples.ribeye.storage.impl.toMeat
 import ru.it_arch.tools.samples.ribeye.storage.impl.toRosemary
 import ru.it_arch.tools.samples.ribeye.storage.impl.toSauceIngredients
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 
 @OptIn(ExperimentalKotest::class)
 class SlotTest : FunSpec({
@@ -43,6 +48,16 @@ class SlotTest : FunSpec({
         quantity = 1
         expiration = Clock.System.now() + 100.days
     }
+    val meat = meat {
+        macronutrients = macronutrients {
+            proteins = 20.0
+            fats = 19.0
+            carbs = 0.0
+            calories = 260.0
+        }
+        quantity = 350
+        expiration = Clock.System.now() + 48.hours
+    }
 
     context("Slot.Piece") {
         val capacity = 100
@@ -51,7 +66,7 @@ class SlotTest : FunSpec({
 
         val slot = Slot.Piece(
             rosemary.macronutrients.format(),
-            rosemary.expiration.boxed.toString(),
+            rosemary.expiration.boxed,
             capacity
         )
         // Тестирование конкурентного доступа: запуск на множестве корутин, исчерпыващих максимальный
@@ -93,7 +108,7 @@ class SlotTest : FunSpec({
 
         val slot = Slot.Weight(
             sauceIngredients.macronutrients.format(),
-            sauceIngredients.expiration.boxed.toString(),
+            sauceIngredients.expiration.boxed,
             capacity
         )
         // Тестирование конкурентного доступа: запуск на множестве корутин, исчерпыващих
@@ -130,7 +145,53 @@ class SlotTest : FunSpec({
     }
 
     context("Slot.Pack") {
-        val slot = Slot.Pack(10)
+        context("Testing concurrency") {
+            pos("Successful adds must be equal successful gets + remain size") {
+                val iterations = 200
+                val slot = Slot.Pack(50)
 
+                val successfulAdds: Int
+                val successfulGets: Int
+
+                coroutineScope {
+                    val producers = (1..iterations).map {
+                        async(Dispatchers.Default) { slot.add(meat.format()) }
+                    }
+                    val consumers = (1..iterations).map {
+                        async(Dispatchers.Default) {
+                            slot.get("100")
+                        }
+                    }
+                    successfulAdds = producers.awaitAll().count { it.isSuccess }
+                    successfulGets = consumers.awaitAll().count { it.isSuccess }
+                }
+
+                successfulAdds shouldBe (successfulGets + slot.size())
+            }
+
+            pos("Only ONE consumer should have succeeded, the rest must fail") {
+                val slot = Slot.Pack(1).apply { add(meat.format()) }
+
+                val results = coroutineScope {
+                    (1..100).map {
+                        async(Dispatchers.Default) { slot.get("100") }
+                    }.awaitAll()
+                }
+
+                results.count { it.isSuccess } shouldBe 1
+                slot.size() shouldBe 0
+            }
+        }
+
+        pos("Meat, requested by quantity 350, must be not less than 350") {
+            val slot = Slot.Pack(3).apply {
+                meat.toDslBuilder().apply { quantity = 300 }.build().format().also { add(it) }
+                meat.toDslBuilder().apply { quantity = 400 }.build().format().also { add(it) }
+                meat.toDslBuilder().apply { quantity = 320 }.build().format().also { add(it) }
+            }
+            slot.get("350").getOrThrow().toMeat().quantity shouldNotBeLessThan QuantityWeightImpl.Companion(
+                350
+            )
+        }
     }
 })

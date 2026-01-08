@@ -8,6 +8,7 @@ import ru.it_arch.tools.samples.ribeye.storage.impl.toMeat
 import ru.it_arch.tools.samples.ribeye.storage.impl.toRosemary
 import ru.it_arch.tools.samples.ribeye.storage.impl.toSauceIngredients
 import ru.it_arch.tools.samples.ribeye.storage.impl.format
+import ru.it_arch.tools.samples.ribeye.storage.slot.Slot
 import kotlin.reflect.KClass
 
 public class Storage(
@@ -18,7 +19,7 @@ public class Storage(
 ) : ResourceRepository {
 
     /** Ленивая инициализация слота при добавлении ресурса */
-    private val slots: MutableMap<KClass<out Resource>, Slot> = mutableMapOf()
+    internal val slots: MutableMap<KClass<out Resource>, Slot> = mutableMapOf()
 
     @Suppress("UNCHECKED_CAST")
     override suspend fun <T : Resource, Q : Quantity> getByType(
@@ -37,8 +38,7 @@ public class Storage(
             Resource.SauceIngredients::class -> slots[type]?.takeIf { it is Slot.Weight }
                 ?.let { slot ->
                     slot.get(requestQuantity.toString()).map { it.toSauceIngredients() as T }
-                }
-                ?: notFound(type)
+                } ?: notFound(type)
 
             Resource.Rosemary::class -> slots[type]?.takeIf { it is Slot.Piece }
                 ?.let { slot -> slot.get(requestQuantity.toString()).map { it.toRosemary() as T } }
@@ -61,7 +61,7 @@ public class Storage(
                 .let { grill ->
                     Slot.Weight(
                         grill.macronutrients.format(),
-                        grill.expiration.toString(),
+                        grill.expiration.boxed,
                         grillSlotCapacity.boxed
                     )
                 }
@@ -72,7 +72,7 @@ public class Storage(
                 .let { sauce ->
                     Slot.Weight(
                         sauce.macronutrients.format(),
-                        sauce.expiration.toString(),
+                        sauce.expiration.boxed,
                         sauceSlotCapacity.boxed
                     )
                 }
@@ -83,7 +83,7 @@ public class Storage(
                 .let { rosemary ->
                     Slot.Piece(
                         rosemary.macronutrients.format(),
-                        rosemary.expiration.toString(),
+                        rosemary.expiration.boxed,
                         rosemarySlotCapacity.boxed
                     )
                 }

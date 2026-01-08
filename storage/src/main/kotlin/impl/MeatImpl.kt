@@ -57,6 +57,7 @@ public data class MeatImpl private constructor(
 
     public class DslBuilder {
         public var macronutrients: Macronutrients? = null
+        /** Вес в граммах */
         public var quantity: Long? = null
         public var expiration: Instant? = null
 
