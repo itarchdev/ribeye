@@ -24,6 +24,8 @@ internal sealed interface Slot {
      * */
     suspend fun get(requestQuantity: String): Result<String>
 
+    fun kill()
+
     /**
      * Поштучное хранение с общим сроком годности.
      * */
@@ -35,13 +37,25 @@ internal sealed interface Slot {
         capacity: Int
     ) : Slot {
 
+        @Volatile
+        private var isActive = true
         private val mutex = Mutex()
         private var _size = capacity
-        override suspend fun size(): Int =
-            mutex.withLock { _size }
 
-        override suspend fun get(requestQuantity: String): Result<String> =
-            withContext(Dispatchers.Default) {
+        override fun kill() {
+            isActive = false
+        }
+
+        override suspend fun size(): Int = withContext(Dispatchers.Default) {
+            check(isActive) { INACTIVE_MESSAGE }
+            mutex.withLock { _size }
+        }
+
+        override suspend fun get(requestQuantity: String): Result<String> {
+            check(isActive) { INACTIVE_MESSAGE }
+            return withContext(Dispatchers.Default) {
+                // Sic! Двойная проверка для строгости
+                check(isActive) { INACTIVE_MESSAGE }
                 mutex.withLock {
                     (_size - requestQuantity.toInt()).takeIf { it >= 0 }
                         ?.also { _size = it }
@@ -59,6 +73,7 @@ internal sealed interface Slot {
                         } ?: emptySlot()
                 }
             }
+        }
     }
 
     /** Весовое хранение с общим сроком годности. */
@@ -70,13 +85,23 @@ internal sealed interface Slot {
         capacity: Long
     ) : Slot {
 
+        @Volatile
+        private var isActive = true
         private val mutex = Mutex()
         private var _size = capacity
+
+        override fun kill() {
+            isActive = false
+        }
+
         override suspend fun size(): Long =
             mutex.withLock { _size }
 
-        override suspend fun get(requestQuantity: String): Result<String> =
-            withContext(Dispatchers.Default) {
+        override suspend fun get(requestQuantity: String): Result<String> {
+            check(isActive) { INACTIVE_MESSAGE }
+            return withContext(Dispatchers.Default) {
+                // Sic! Двойная проверка для строгости
+                check(isActive) { INACTIVE_MESSAGE }
                 mutex.withLock {
                     (_size - requestQuantity.toLong()).takeIf { it >= 0 }
                         ?.also { _size = it }
@@ -94,6 +119,7 @@ internal sealed interface Slot {
                         } ?: emptySlot()
                 }
             }
+        }
     }
 
     /** Поштучное хранение ресурса в упаковке со своим сроком годности и весом/кол-вом. */
@@ -101,17 +127,28 @@ internal sealed interface Slot {
         private val capacity: Int
     ) : Slot {
 
+        @Volatile
+        private var isActive = true
+
         private val mutex = Mutex()
         private val slot = ArrayDeque<String>(capacity)
 
-        override suspend fun size(): Int =
-            mutex.withLock { slot.size }
+        override fun kill() {
+            isActive = false
+        }
+
+        override suspend fun size(): Int {
+            check(isActive) { INACTIVE_MESSAGE }
+            return mutex.withLock { slot.size }
+        }
 
         /**
          * Получение
          * */
-        override suspend fun get(requestQuantity: String): Result<String> =
-            withContext(Dispatchers.Default) {
+        override suspend fun get(requestQuantity: String): Result<String> {
+            check(isActive) { INACTIVE_MESSAGE }
+            return withContext(Dispatchers.Default) {
+                check(isActive) { INACTIVE_MESSAGE }
                 mutex.withLock {
                     // Найти подходящий ресурс в слоте по критерию веса — большего или равным запрашиваемому
                     // и извлечь его из слота
@@ -122,9 +159,12 @@ internal sealed interface Slot {
                     } ?: error("request quantity must be Int")
                 }
             }
+        }
 
-        suspend fun add(resource: String): Result<Unit> =
-            withContext(Dispatchers.Default) {
+        suspend fun add(resource: String): Result<Unit> {
+            check(isActive) { INACTIVE_MESSAGE }
+            return withContext(Dispatchers.Default) {
+                check(isActive) { INACTIVE_MESSAGE }
                 mutex.withLock {
                     resource.takeIf { slot.size < capacity }
                         ?.also(slot::add)
@@ -132,6 +172,7 @@ internal sealed interface Slot {
                         ?: slotOverflow()
                 }
             }
+        }
 
         /**
          * @receiver строковое представление ресурса
@@ -157,6 +198,8 @@ internal sealed interface Slot {
     "quantity": $QUANTITY_PLACEHOLDER,
     "expiration": "$EXPIRATION_PLACEHOLDER"
 }"""
+
+        const val INACTIVE_MESSAGE = "RIP. I'm dead. Forget me forever :("
 
         /**
          *  Генерация элемента хранения в соответствии с параметрами слота, где он хранится.
