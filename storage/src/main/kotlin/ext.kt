@@ -11,24 +11,3 @@ internal fun emptySlot(): Result<String> =
 
 internal fun slotOverflow(): Result<Unit> =
     Result.failure((StorageError("Slot is full")))
-
-/*
-        data class SauceComponents(
-            override val macronutrients: Macronutrients = macronutrients {
-                proteins = 8.0
-                fats = 0.5
-                carbs = 7.5
-                calories = 65.0
-            }
-        ) : Unpacked
-
-        data class Rosemary(
-            override val macronutrients: Macronutrients = macronutrients {
-                proteins = 3.3
-                fats = 5.9
-                carbs = 20.7
-                calories = 131.0
-            }
-        ) : Unpacked
-
-* */

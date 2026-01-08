@@ -1,14 +1,20 @@
 package ru.it_arch.tools.samples.ribeye.storage
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * Типонезависимый контейнер хранилища для разных видов ресурсов — штучных, весовых.
- * Внутренее представление — строковое, по факту — JSON, но контейнер не должен знать о фактическом
- * формате представления его элементов.
+ * Типонезависимый контейнер (слот) хранилища для разных видов ресурсов — упакованных, штучных, весовых.
+ * Внутренее представление — строковое, по факту — хардкодинг в JSON-формате. Однако контейнер
+ * не должен знать о фактическом формате представления его элементов. Сериализация/десериализация
+ * осуществляется уровнем выше.
  * */
 internal sealed interface Slot {
+
+    /** текущая заполненность слота */
+    suspend fun size(): Number
 
     /**
      *
@@ -28,18 +34,23 @@ internal sealed interface Slot {
         capacity: Int
     ) : Slot {
 
-        private var size = capacity
+        private val mutex = Mutex()
+        private var _size = capacity
+        override suspend fun size(): Int =
+            mutex.withLock { _size }
 
         override suspend fun get(requestQuantity: String): Result<String> =
             withContext(Dispatchers.Default) {
-                (size - requestQuantity.toInt()).takeIf { it >= 0 }
-                    ?.also { size = it }
-                    ?.let {
-                        // Реально отпускаемое количество может не соответствовать запрашиваемому.
-                        // Здесь можно подменить это значение и потом решать вопрос с ревизией
-                        val resultQuantity = requestQuantity
-                        Result.success(buildJson(macronutrients, resultQuantity, expiration))
-                    } ?: emptySlot()
+                mutex.withLock {
+                    (_size - requestQuantity.toInt()).takeIf { it >= 0 }
+                        ?.also { _size = it }
+                        ?.let {
+                            // Реально отпускаемое количество может не соответствовать запрашиваемому.
+                            // Здесь можно подменить это значение и потом решать вопрос с ревизией
+                            val resultQuantity = requestQuantity
+                            Result.success(buildResponse(macronutrients, resultQuantity, expiration))
+                        } ?: emptySlot()
+                }
             }
     }
 
@@ -52,18 +63,23 @@ internal sealed interface Slot {
         capacity: Long
     ) : Slot {
 
-        private var size = capacity
+        private val mutex = Mutex()
+        private var _size = capacity
+        override suspend fun size(): Long =
+            mutex.withLock { _size }
 
         override suspend fun get(requestQuantity: String): Result<String> =
             withContext(Dispatchers.Default) {
-                (size - requestQuantity.toLong()).takeIf { it >= 0 }
-                    ?.also { size = it }
-                    ?.let {
-                        // Реально отпускаемое количество может не соответствовать запрашиваемому.
-                        // Усушка, утруска, обвес и прочая складская магия :-)
-                        val resultQuantity = requestQuantity
-                        Result.success(buildJson(macronutrients, resultQuantity, expiration))
-                    } ?: emptySlot()
+                mutex.withLock {
+                    (_size - requestQuantity.toLong()).takeIf { it >= 0 }
+                        ?.also { _size = it }
+                        ?.let {
+                            // Реально отпускаемое количество может не соответствовать запрашиваемому.
+                            // Усушка, утруска, обвес и прочая складская магия :-)
+                            val resultQuantity = requestQuantity
+                            Result.success(buildResponse(macronutrients, resultQuantity, expiration))
+                        } ?: emptySlot()
+                }
             }
     }
 
@@ -72,27 +88,37 @@ internal sealed interface Slot {
         private val capacity: Int
     ) : Slot {
 
+        private val mutex = Mutex()
         private val slot = ArrayDeque<String>(capacity)
+
+        override suspend fun size(): Int =
+            mutex.withLock { slot.size }
 
         /**
          * Получение
          * */
         override suspend fun get(requestQuantity: String): Result<String> =
             withContext(Dispatchers.Default) {
-                // Найти подходящий ресурс в слоте по критерию веса — большего или равным запрашиваемому
-                // и извлечь его из слота
-                requestQuantity.toIntOrNull()?.let { intQuantity ->
-                    slot.firstOrNull { it quantityIsNotLessThan intQuantity }
-                        ?.let { el -> Result.success(el).also { slot.remove(el) } }
-                        ?: emptySlot()
-                } ?: error("request quantity must be Int")
+                mutex.withLock {
+                    // Найти подходящий ресурс в слоте по критерию веса — большего или равным запрашиваемому
+                    // и извлечь его из слота
+                    requestQuantity.toIntOrNull()?.let { intQuantity ->
+                        slot.firstOrNull { it quantityIsNotLessThan intQuantity }
+                            ?.let { el -> Result.success(el).also { slot.remove(el) } }
+                            ?: emptySlot()
+                    } ?: error("request quantity must be Int")
+                }
             }
 
-        fun add(resource: String): Result<Unit> =
-            resource.takeIf { slot.size < capacity }
-                ?.also(slot::add)
-                ?.let { Result.success(Unit) }
-                ?: slotOverflow()
+        suspend fun add(resource: String): Result<Unit> =
+            withContext(Dispatchers.Default) {
+                mutex.withLock {
+                    resource.takeIf { slot.size < capacity }
+                        ?.also(slot::add)
+                        ?.let { Result.success(Unit) }
+                        ?: slotOverflow()
+                }
+            }
 
         /**
          * @receiver строковое представление ресурса
@@ -119,7 +145,12 @@ internal sealed interface Slot {
     "expiration": "$EXPIRATION_PLACEHOLDER"
 }"""
 
-        fun buildJson(macronutrients: String, quantity: String, expiration: String): String =
+        /**
+         *  Генерация элемента хранения в соответствии с параметрами слота, где он хранится.
+         *  Полагается, что слоты хранят элементы в виде строки (JSON).
+         *  Реальное хранение заменяется генерацией элемента .
+         */
+        fun buildResponse(macronutrients: String, quantity: String, expiration: String): String =
             RESOURCE_TEMPLATE.replace(MACRONUTRIENTS_PLACEHOLDER, macronutrients)
                 .replace(QUANTITY_PLACEHOLDER, quantity)
                 .replace(EXPIRATION_PLACEHOLDER, expiration)

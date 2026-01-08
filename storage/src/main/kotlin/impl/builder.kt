@@ -9,6 +9,7 @@ import ru.it_arch.tools.samples.ribeye.data.Resource
 
 internal val json = Json {
     prettyPrint = true
+    /*
     serializersModule = SerializersModule {
         polymorphic(Macronutrients::class) {
             subclass(MacronutrientsImpl::class)
@@ -25,7 +26,7 @@ internal val json = Json {
         polymorphic(Resource.Rosemary::class) {
             subclass(RosemaryImpl::class)
         }
-    }
+    }*/
 }
 
 public inline fun macronutrients(block: MacronutrientsImpl.DslBuilder.() -> Unit): Macronutrients =
@@ -48,10 +49,10 @@ public fun Macronutrients.toDslBuilder(): MacronutrientsImpl.DslBuilder =
     }
 
 public fun Macronutrients.format(): String =
-    json.encodeToString(this)
+    json.encodeToString(this as MacronutrientsImpl)
 
 public fun String.toMacronutrients(): Macronutrients =
-    json.decodeFromString(this)
+    json.decodeFromString<MacronutrientsImpl>(this)
 
 // Meat
 
@@ -73,10 +74,10 @@ public fun Resource.Meat.toDslBuilder(): MeatImpl.DslBuilder =
     }
 
 public fun Resource.Meat.format(): String =
-    json.encodeToString(this)
+    json.encodeToString(this as MeatImpl)
 
 public fun String.toMeat(): Resource.Meat =
-    json.decodeFromString(this)
+    json.decodeFromString<MeatImpl>(this)
 
 // Grill
 
@@ -98,10 +99,10 @@ public fun Resource.Grill.toDslBuilder(): GrillImpl.DslBuilder =
     }
 
 public fun Resource.Grill.format(): String =
-    json.encodeToString(this)
+    json.encodeToString(this as GrillImpl)
 
 public fun String.toGrill(): Resource.Grill =
-    json.decodeFromString(this)
+    json.decodeFromString<GrillImpl>(this)
 
 // Sauce
 
@@ -125,10 +126,10 @@ public fun Resource.SauceIngredients.toDslBuilder(): SauceIngredientsImpl.DslBui
     }
 
 public fun Resource.SauceIngredients.format(): String =
-    json.encodeToString(this)
+    json.encodeToString(this as SauceIngredientsImpl)
 
 public fun String.toSauceIngredients(): Resource.SauceIngredients =
-    json.decodeFromString(this)
+    json.decodeFromString<SauceIngredientsImpl>(this)
 
 // Rosemary
 
@@ -150,7 +151,7 @@ public fun Resource.Rosemary.toDslBuilder(): RosemaryImpl.DslBuilder =
     }
 
 public fun Resource.Rosemary.format(): String =
-    json.encodeToString(this)
+    json.encodeToString(this as RosemaryImpl)
 
 public fun String.toRosemary(): Resource.Rosemary =
-    json.decodeFromString(this)
+    json.decodeFromString<RosemaryImpl>(this)
