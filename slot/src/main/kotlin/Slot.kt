@@ -5,7 +5,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import ru.it_arch.tools.samples.ribeye.storage.StorageError
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.concurrent.atomics.incrementAndFetch
@@ -179,7 +178,7 @@ internal sealed interface Slot {
                             ?.let { el ->
                                 Result.success(version.incrementAndFetch() to el)
                                     .also { slot.remove(el) }
-                            } ?: Result.failure((StorageError("Slot is empty")))
+                            } ?: Result.failure((SlotError("Slot is empty")))
                     } ?: error("request quantity must be Int")
                 }
             }

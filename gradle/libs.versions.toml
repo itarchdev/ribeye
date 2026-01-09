@@ -14,6 +14,7 @@ k3dm = "2.1.1"
 junit = "4.13.2"
 kover = "0.9.4"
 kotest = "6.0.7"
+mockk = "1.14.7"
 test-report = "1.4"
 
 [libraries]
@@ -25,6 +26,7 @@ k3dm = { group = "ru.it-arch", name = "k3dm", version.ref = "k3dm" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotest = { group = "io.kotest", name = "kotest-runner-junit5", version.ref = "kotest" }
+mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 kotest-assertions = { group = "io.kotest", name = "kotest-assertions-core", version.ref = "kotest" }
 kotest-htmlreporter = { group = "io.kotest", name = "kotest-extensions-htmlreporter-jvm", version.ref = "kotest" }
 

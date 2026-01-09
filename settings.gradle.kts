@@ -22,6 +22,7 @@ plugins {
 }
 
 include(
+    "slot",
     "storage",
     "api",
     "app"

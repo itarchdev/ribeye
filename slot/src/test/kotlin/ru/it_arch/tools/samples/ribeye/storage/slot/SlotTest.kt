@@ -5,9 +5,14 @@ import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.comparables.shouldNotBeLessThan
 import io.kotest.matchers.longs.shouldBeInRange
+import io.kotest.matchers.result.shouldBeFailure
+import io.kotest.matchers.result.shouldBeSuccess
 import io.kotest.matchers.shouldBe
 import io.kotest.provided.neg
 import io.kotest.provided.pos
+import io.kotest.provided.tech
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.InternalCoroutinesApi
@@ -20,53 +25,49 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
-import ru.it_arch.tools.samples.ribeye.storage.impl.QuantityWeightImpl
-import ru.it_arch.tools.samples.ribeye.storage.impl.format
-import ru.it_arch.tools.samples.ribeye.storage.impl.macronutrients
-import ru.it_arch.tools.samples.ribeye.storage.impl.meat
-import ru.it_arch.tools.samples.ribeye.storage.impl.rosemary
-import ru.it_arch.tools.samples.ribeye.storage.impl.sauceIngredients
-import ru.it_arch.tools.samples.ribeye.storage.impl.toDslBuilder
-import ru.it_arch.tools.samples.ribeye.storage.impl.toMeat
-import ru.it_arch.tools.samples.ribeye.storage.impl.toRosemary
-import ru.it_arch.tools.samples.ribeye.storage.impl.toSauceIngredients
+import ru.it_arch.tools.samples.ribeye.data.Resource
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 
-@OptIn(ExperimentalKotest::class, ExperimentalCoroutinesApi::class, InternalCoroutinesApi::class)
+@OptIn(
+    ExperimentalKotest::class,
+    ExperimentalCoroutinesApi::class,
+    InternalCoroutinesApi::class
+)
 class SlotTest : FunSpec({
+    val rosemary = mockk<Resource.Rosemary>()
+    every { rosemary.macronutrients.proteins.boxed } returns 3.3
+    every { rosemary.macronutrients.fats.boxed } returns 5.9
+    every { rosemary.macronutrients.carbs.boxed } returns 20.7
+    every { rosemary.macronutrients.calories.boxed } returns 131.0
+    every { rosemary.quantity.boxed } returns 1
+    every { rosemary.expiration.boxed } returns Clock.System.now() + 300.days
 
-    val rosemary = rosemary {
-        macronutrients = macronutrients {
-            proteins = 3.3
-            fats = 5.9
-            carbs = 20.7
-            calories = 131.0
-        }
-        quantity = 1
-        expiration = Clock.System.now() + 300.days
-    }
-    val sauceIngredients = sauceIngredients {
-        macronutrients = macronutrients {
-            proteins = 8.0
-            fats = 0.5
-            carbs = 7.5
-            calories = 65.0
-        }
-        quantity = 1
-        expiration = Clock.System.now() + 100.days
-    }
-    val meat = meat {
-        macronutrients = macronutrients {
-            proteins = 20.0
-            fats = 19.0
-            carbs = 0.0
-            calories = 260.0
-        }
-        quantity = 350
-        expiration = Clock.System.now() + 48.hours
-    }
+    val sauceIngredients = mockk<Resource.SauceIngredients>()
+    every { sauceIngredients.macronutrients.proteins.boxed } returns 8.0
+    every { sauceIngredients.macronutrients.fats.boxed } returns 0.5
+    every { sauceIngredients.macronutrients.carbs.boxed } returns 7.5
+    every { sauceIngredients.macronutrients.calories.boxed } returns 65.0
+    every { sauceIngredients.quantity.boxed } returns 1
+    every { sauceIngredients.expiration.boxed } returns Clock.System.now() + 100.days
+
+    val meat = mockk<Resource.Meat>()
+    every { meat.macronutrients.proteins.boxed } returns 20.0
+    every { meat.macronutrients.fats.boxed } returns 19.0
+    every { meat.macronutrients.carbs.boxed } returns 0.0
+    every { meat.macronutrients.calories.boxed } returns 260.0
+    every { meat.quantity.boxed } returns 350
+    every { meat.expiration.boxed } returns Clock.System.now() + 48.hours
+
+    /*
+    tech("Simple test for test this Unit-test") {
+        Slot.Piece(
+            rosemary.macronutrients.format(),
+            rosemary.expiration.boxed,
+            1
+        ).get("2").shouldBeFailure()
+    }*/
 
     context("Slot.Piece") {
         val capacity = 100
@@ -136,9 +137,11 @@ class SlotTest : FunSpec({
 
         pos("Slot must return JSON representation of expected Rosemary object") {
             // Достаточно проверить первый элемент выдачи и удедиться, что его можно десериализовать
-            rosemary.toDslBuilder().apply { quantity = requestQuantity }.build().also { expected ->
-                results.first { it.isSuccess }.getOrNull()!!.toRosemary() shouldBe expected
-            }
+            results.first { it.isSuccess }.getOrThrow() shouldBe Slot.buildResponse(
+                rosemary.macronutrients.format(),
+                requestQuantity.toString(),
+                rosemary.expiration.boxed
+            )
         }
     }
 
@@ -211,9 +214,11 @@ class SlotTest : FunSpec({
 
         pos("Slot must return JSON representation of expected SauceIngredients object") {
             // Достаточно проверить первый элемент выдачи и удедиться, что его можно десериализовать
-            sauceIngredients.toDslBuilder().apply { quantity = requestQuantity }.build().also { expected ->
-                results.first { it.isSuccess }.getOrNull()!!.toSauceIngredients() shouldBe expected
-            }
+            results.first { it.isSuccess }.getOrThrow() shouldBe Slot.buildResponse(
+                sauceIngredients.macronutrients.format(),
+                requestQuantity.toString(),
+                sauceIngredients.expiration.boxed
+            )
         }
     }
 
@@ -260,7 +265,7 @@ class SlotTest : FunSpec({
                     val versionStart = slot.currentVersion // version = 1 after add()
                     slot.get("100").getOrThrow().also { (version, meatStr) -> // version = 2 after get()
                         version shouldBe (versionStart + 1)
-                        meatStr.toMeat() shouldBe meat
+                        meatStr shouldBe meat.format()
                     }
                     slot.currentVersion shouldBe 2
                 }
@@ -305,14 +310,13 @@ class SlotTest : FunSpec({
         }
 
         pos("Meat, requested by quantity 350, must be not less than 350") {
-            val slot = Slot.Pack(3).apply {
-                meat.toDslBuilder().apply { quantity = 300 }.build().format().also { add(it) }
-                meat.toDslBuilder().apply { quantity = 400 }.build().format().also { add(it) }
-                meat.toDslBuilder().apply { quantity = 320 }.build().format().also { add(it) }
-            }
-            slot.get("350").getOrThrow().second.toMeat().quantity shouldNotBeLessThan QuantityWeightImpl.Companion(
-                350
-            )
+            every { meat.quantity.boxed } returnsMany listOf(300, 400, 320)
+
+            Slot.Pack(3).apply {
+                add(meat.format())
+                add(meat.format())
+                add(meat.format())
+            }.get("350").getOrThrow().second.fetchWeightQuantity() shouldNotBeLessThan 350
         }
     }
 })
