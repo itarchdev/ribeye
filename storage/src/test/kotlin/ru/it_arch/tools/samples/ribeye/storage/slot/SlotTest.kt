@@ -17,9 +17,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 import ru.it_arch.tools.samples.ribeye.storage.impl.QuantityWeightImpl
 import ru.it_arch.tools.samples.ribeye.storage.impl.format
 import ru.it_arch.tools.samples.ribeye.storage.impl.macronutrients
@@ -253,6 +253,54 @@ class SlotTest : FunSpec({
 
                 results.count { it.isSuccess } shouldBe 1
                 slot.size() shouldBe 0
+            }
+
+            pos("`get()` must increment version and return correct snapshot") {
+                Slot.Pack(1).apply { add(meat.format()) }.also { slot ->
+                    val versionStart = slot.currentVersion // version = 1 after add()
+                    slot.get("100").getOrThrow().also { (version, meatStr) -> // version = 2 after get()
+                        version shouldBe (versionStart + 1)
+                        meatStr.toMeat() shouldBe meat
+                    }
+                    slot.currentVersion shouldBe 2
+                }
+            }
+
+            pos("Concurrent operations should maintain version integrity") {
+                val jobsCount = 100
+                val opsPerJob = 100
+                val total = jobsCount * opsPerJob
+                val content = meat.format()
+                val slot = Slot.Pack(total)
+
+                runTest {
+                    withContext(Dispatchers.Default) {
+                        coroutineScope {
+                            repeat(jobsCount) {
+                                launch {
+                                    repeat(opsPerJob) { slot.add(content) }
+                                }
+                            }
+                        }
+                    }
+                }
+                slot.currentVersion shouldBe total
+            }
+
+            neg("Must detect concurrent modification during get") {
+                val slot = Slot.Pack(2).apply { add(meat.format()) }
+                runTest {
+                    val startVersion = slot.currentVersion // version = 1
+
+                    // В "процессе" версия должна измениться "неожиданным" вызовом `add`
+                    slot.add(meat.format()) // version = 2
+
+                    slot.get("50").getOrThrow().also { (version, _) ->
+                        // "Ожидаем", что версия будет 2, но по факту 3
+                        println("\"expecting\" version: ${startVersion + 1} result.version: $version")
+                        (version == startVersion + 1) shouldBe false
+                    }
+                }
             }
         }
 
