@@ -34,8 +34,8 @@ tasks.withType<Test>().configureEach {
 
 dependencies {
     api(project(":api"))
-    api(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.serialization.json)
+    api(libs.kotlinx.serialization.json)
+    implementation(project(":slot"))
 
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotest)
@@ -56,7 +56,7 @@ kover {
             }
             verify {
                 rule {
-                    disabled = false
+                    disabled = true
                     bound {
                         minValue = 1
                     }

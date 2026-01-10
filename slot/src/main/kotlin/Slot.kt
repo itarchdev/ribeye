@@ -16,13 +16,13 @@ import kotlin.time.Instant
  * не должен знать о фактическом формате представления его элементов. Сериализация/десериализация
  * осуществляется уровнем выше.
  * */
-internal sealed interface Slot {
+public sealed interface Slot {
 
     /** Вынесен с целью замены для Unit-тестов. По умолчанию — [Dispatchers.Default] */
-    val dispatcher: CoroutineDispatcher
+    public val dispatcher: CoroutineDispatcher
 
     /** текущая заполненность слота */
-    suspend fun size(): Number
+    public suspend fun size(): Number
 
     /**
      * Одноразовый слот, заменямый вместе с новым содержимым. Состояние ЖЦ определяется флагом [isActive]
@@ -31,7 +31,7 @@ internal sealed interface Slot {
      * @param expiration строковое представление срока годности ([Instant])
      * @param capacity максимальный размер слота
      * */
-    sealed class Disposable(
+    public sealed class Disposable(
         protected val macronutrients: String,
         protected val expiration: Instant,
         protected val capacity: Number,
@@ -39,10 +39,10 @@ internal sealed interface Slot {
 
         /** Состояние слота. Необходим для предотвращения доступа к убитому слоту при конкурентном обретении слота */
         @Volatile
-        protected var isActive = true
-        protected val mutex = Mutex()
+        protected var isActive: Boolean = true
+        protected val mutex: Mutex = Mutex()
 
-        fun kill() {
+        public fun kill() {
             isActive = false
         }
 
@@ -51,7 +51,7 @@ internal sealed interface Slot {
          * @param requestQuantity
          * @return
          * */
-        abstract suspend fun get(requestQuantity: String): Result<String>
+        public abstract suspend fun get(requestQuantity: String): Result<String>
     }
 
     /**
@@ -60,21 +60,21 @@ internal sealed interface Slot {
      *
      * */
     @OptIn(ExperimentalAtomicApi::class)
-    sealed class Reusable() : Slot {
-        protected val mutex = Mutex()
-        protected val version = AtomicInt(0)
-        val currentVersion: Int
+    public sealed class Reusable() : Slot {
+        protected val mutex: Mutex = Mutex()
+        protected val version: AtomicInt = AtomicInt(0)
+        public val currentVersion: Int
             get() = version.load()
 
-        abstract suspend fun get(requestQuantity: String): Result<Pair<Int, String>>
+        public abstract suspend fun get(requestQuantity: String): Result<Pair<Int, String>>
 
-        abstract suspend fun add(resource: String): Result<Int>
+        public abstract suspend fun add(resource: String): Result<Int>
     }
 
     /**
      * Поштучное хранение с общим сроком годности.
      * */
-    class Piece(
+    public class Piece(
         macronutrients: String,
         expiration: Instant,
         capacity: Int,
@@ -114,7 +114,7 @@ internal sealed interface Slot {
     }
 
     /** Весовое хранение с общим сроком годности. */
-    class Weight(
+    public class Weight(
         macronutrients: String,
         expiration: Instant,
         capacity: Long,
@@ -154,7 +154,7 @@ internal sealed interface Slot {
 
     /** Поштучное хранение ресурса в упаковке со своим сроком годности и весом/кол-вом. */
     @OptIn(ExperimentalAtomicApi::class)
-    class Pack(
+    public class Pack(
         private val capacity: Int,
         override val dispatcher: CoroutineDispatcher = Dispatchers.Default
     ) : Reusable() {
@@ -197,34 +197,34 @@ internal sealed interface Slot {
          * @param request запрашиваемое количество
          * @return результат поиска
          * */
-        infix fun String.quantityIsNotLessThan(request: Int): Boolean =
+        private infix fun String.quantityIsNotLessThan(request: Int): Boolean =
             FIND_QUNTITY_RE.find(this)?.groupValues?.get(1)?.toIntOrNull()?.let { it >= request }
                 ?: false
 
-        companion object {
+        private companion object {
             val FIND_QUNTITY_RE = """"quantity"\s*:\s*(\d+)""".toRegex()
         }
     }
 
-    companion object {
-        const val MACRONUTRIENTS_PLACEHOLDER = "{macronutrients}"
-        const val QUANTITY_PLACEHOLDER = "{quantity}"
-        const val EXPIRATION_PLACEHOLDER = "{expiration}"
+    public companion object {
+        private const val MACRONUTRIENTS_PLACEHOLDER = "{macronutrients}"
+        private const val QUANTITY_PLACEHOLDER = "{quantity}"
+        private const val EXPIRATION_PLACEHOLDER = "{expiration}"
 
-        const val RESOURCE_TEMPLATE = """{
+        private const val RESOURCE_TEMPLATE = """{
     "macronutrients": $MACRONUTRIENTS_PLACEHOLDER,
     "quantity": $QUANTITY_PLACEHOLDER,
     "expiration": "$EXPIRATION_PLACEHOLDER"
 }"""
 
-        const val INACTIVE_MESSAGE = "RIP. I'm dead. Forget me forever :("
+        private const val INACTIVE_MESSAGE = "RIP. I'm dead. Forget me forever :("
 
         /**
          *  Генерация элемента хранения в соответствии с параметрами слота, где он хранится.
          *  Полагается, что слоты хранят элементы в виде строки (JSON).
          *  Реальное хранение заменяется генерацией элемента .
          */
-        fun buildResponse(macronutrients: String, quantity: String, expiration: Instant): String =
+        public fun buildResponse(macronutrients: String, quantity: String, expiration: Instant): String =
             RESOURCE_TEMPLATE.replace(MACRONUTRIENTS_PLACEHOLDER, macronutrients)
                 .replace(QUANTITY_PLACEHOLDER, quantity)
                 .replace(EXPIRATION_PLACEHOLDER, expiration.toString())

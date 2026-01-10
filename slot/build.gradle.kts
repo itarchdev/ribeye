@@ -33,7 +33,6 @@ tasks.withType<Test>().configureEach {
 
 dependencies {
     api(libs.kotlinx.coroutines.core)
-    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(project(":api"))
     testImplementation(libs.mockk)
