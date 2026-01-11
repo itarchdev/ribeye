@@ -255,6 +255,40 @@ class StorageTest: FunSpec({
         }
     }
 
+    context("Meat slot") {
+        pos("Empty slot must return size 0") {
+            emptyStorage.size<Resource.Meat, Quantity.Piece>() shouldBe 0.toQuantity()
+        }
+
+        neg("Empty slot.get() must return notFound result") {
+            emptyStorage.pull<Resource.Meat>(10L.toQuantity())
+                .shouldBeFailure<StorageError.NotFound>()
+        }
+
+        /*
+        pos("must successfully put(), pull() and exact size 0") {
+            val meatCapacity = 3.toQuantity()
+            val requestQuantity = 350L.toQuantity()
+
+            val storage = slotFactory(
+                meatCapacity,
+                0L.toQuantity(),
+                0L.toQuantity(),
+                0.toQuantity()
+            ).let(::Storage)
+
+            val meat = meat {
+                macronutrients = MacronutrientsImpl.DEFAULT
+                quantity = requestQuantity.boxed
+                expiration = Instant.DISTANT_FUTURE
+            }
+            storage.put(meat) shouldBeSuccess Unit
+            storage.pull<Resource.Rosemary>(requestQuantity) shouldBeSuccess meat
+            storage.size<Resource.Rosemary, Quantity.Weight>() shouldBe (meatCapacity - meat.quantity)
+        }*/
+
+    }
+
     xcontext("Meat slot") {
 
         val meatTest = meat {

@@ -16,6 +16,7 @@ import ru.it_arch.tools.samples.ribeye.storage.impl.format
 import ru.it_arch.tools.samples.ribeye.storage.slot.Slot
 import kotlin.math.pow
 import kotlin.reflect.KClass
+import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -170,30 +171,32 @@ public class Storage(
     }
 
     override suspend fun <T : Resource> putByType(type: KClass<out T>, resource: T): Result<Unit> =
-        when(type) {
-            // Используем имеющийся слот, если есть
-            Resource.Meat::class -> (resource as Resource.Meat).let { meat ->
-                (getSlot(type) ?: run {
-                    slotFactory.slotForMeat().also { setSlot(type, it) }
-                }).let { slot ->
-                    setWithOptimisticLocking(type, slot, meat.format()).map { Unit }
+        resource.takeUnless { it.isRotten() }?.let {
+            when(type) {
+                // Используем имеющийся слот, если есть
+                Resource.Meat::class -> (resource as Resource.Meat).let { meat ->
+                    (getSlot(type) ?: run {
+                        slotFactory.slotForMeat().also { setSlot(type, it) }
+                    }).let { slot ->
+                        setWithOptimisticLocking(type, slot, meat.format()).map { Unit }
+                    }
                 }
+                // старое выкидываем, создавая новый слот под новый срок хранения
+                Resource.Grill::class -> (resource as Resource.Grill).let { grill ->
+                    slotFactory.slotForGrill(grill.macronutrients, grill.expiration)
+                }.also { setSlot(type, it) }.let { Result.success(Unit) }
+
+                Resource.SauceIngredients::class -> (resource as Resource.SauceIngredients).let { sauce ->
+                    slotFactory.slotForSauce(sauce.macronutrients, sauce.expiration)
+                }.also { setSlot(type, it) }.let { Result.success(Unit) }
+
+                Resource.Rosemary::class -> (resource as Resource.Rosemary).let { rosemary ->
+                    slotFactory.slotForRosemary(rosemary.macronutrients, rosemary.expiration)
+                }.also { setSlot(type, it) }.let { Result.success(Unit) }
+
+                else -> error("Unknown resource type: ${type.simpleName}")
             }
-            // старое выкидываем, создавая новый слот под новый срок хранения
-            Resource.Grill::class -> (resource as Resource.Grill).let { grill ->
-                slotFactory.slotForGrill(grill.macronutrients, grill.expiration)
-            }.also { setSlot(type, it) }.let { Result.success(Unit) }
-
-            Resource.SauceIngredients::class -> (resource as Resource.SauceIngredients).let { sauce ->
-                slotFactory.slotForSauce(sauce.macronutrients,sauce.expiration)
-            }.also { setSlot(type, it) }.let { Result.success(Unit) }
-
-            Resource.Rosemary::class -> (resource as Resource.Rosemary).let { rosemary ->
-                slotFactory.slotForRosemary(rosemary.macronutrients, rosemary.expiration)
-            }.also { setSlot(type, it) }.let { Result.success(Unit) }
-
-            else -> error("Unknown resource type: ${type.simpleName}")
-        }
+        } ?: resource.rotten()
 
     public companion object {
         private const val ATTEMPTS = 3
