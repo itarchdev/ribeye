@@ -1,3 +1,6 @@
 package ru.it_arch.tools.samples.ribeye.storage
 
-public class StorageError(msg: String) : RuntimeException(msg)
+public sealed class StorageError(msg: String) : RuntimeException(msg) {
+    public class NotFound(resourceName: String) : StorageError("Resource $resourceName not found")
+    public class ExhaustedRetries(slotName: String) : StorageError("Exhausted retries for slot $slotName")
+}

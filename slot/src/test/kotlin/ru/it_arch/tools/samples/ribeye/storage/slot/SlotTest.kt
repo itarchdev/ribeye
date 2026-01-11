@@ -5,12 +5,9 @@ import io.kotest.common.ExperimentalKotest
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.comparables.shouldNotBeLessThan
 import io.kotest.matchers.longs.shouldBeInRange
-import io.kotest.matchers.result.shouldBeFailure
-import io.kotest.matchers.result.shouldBeSuccess
 import io.kotest.matchers.shouldBe
 import io.kotest.provided.neg
 import io.kotest.provided.pos
-import io.kotest.provided.tech
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -60,15 +57,6 @@ class SlotTest : FunSpec({
     every { meat.quantity.boxed } returns 350
     every { meat.expiration.boxed } returns Clock.System.now() + 48.hours
 
-    /*
-    tech("Simple test for test this Unit-test") {
-        Slot.Piece(
-            rosemary.macronutrients.format(),
-            rosemary.expiration.boxed,
-            1
-        ).get("2").shouldBeFailure()
-    }*/
-
     context("Slot.Piece") {
         val capacity = 100
         val iterations = 150
@@ -84,7 +72,7 @@ class SlotTest : FunSpec({
         val results = coroutineScope {
             (1..iterations).map {
                 async(Dispatchers.Default) {
-                    slot.get("$requestQuantity")
+                    slot.pull(requestQuantity)
                 }
             }.awaitAll()
         }
@@ -122,7 +110,7 @@ class SlotTest : FunSpec({
                 // Используем SupervisorJob и async/await, чтобы ожидаемое исключение
                 // IllegalStateException не порушило тест сразу — в соответствии со structured concurrency
                 val deferred = async(SupervisorJob()) {
-                    slot.get("1") // 1. Первый вызов `check(isActive)`
+                    slot.pull(1) // 1. Первый вызов `check(isActive)`
                 }
                 // 2. Окно возможности: корутина `withContext` ждет в очереди на паузе.
                 // Сбрасываем флаг активности до того, как testDispatcher начнет выполнять корутину
@@ -139,7 +127,7 @@ class SlotTest : FunSpec({
             // Достаточно проверить первый элемент выдачи и удедиться, что его можно десериализовать
             results.first { it.isSuccess }.getOrThrow() shouldBe Slot.buildResponse(
                 rosemary.macronutrients.format(),
-                requestQuantity.toString(),
+                requestQuantity,
                 rosemary.expiration.boxed
             )
         }
@@ -160,7 +148,7 @@ class SlotTest : FunSpec({
         val results = coroutineScope {
             (1..iterations).map {
                 async(Dispatchers.Default) {
-                    slot.get("$requestQuantity")
+                    slot.pull(requestQuantity)
                 }
             }.awaitAll()
         }
@@ -199,7 +187,7 @@ class SlotTest : FunSpec({
                 // Используем SupervisorJob и async/await, чтобы ожидаемое исключение
                 // IllegalStateException не порушило тест сразу — в соответствии со structured concurrency
                 val deferred = async(SupervisorJob()) {
-                    slot.get("300") // 1. Первый вызов `check(isActive)`
+                    slot.pull(300) // 1. Первый вызов `check(isActive)`
                 }
                 // 2. Окно возможности: корутина `withContext` ждет в очереди на паузе.
                 // Сбрасываем флаг активности до того, как testDispatcher начнет выполнять корутину
@@ -216,7 +204,7 @@ class SlotTest : FunSpec({
             // Достаточно проверить первый элемент выдачи и удедиться, что его можно десериализовать
             results.first { it.isSuccess }.getOrThrow() shouldBe Slot.buildResponse(
                 sauceIngredients.macronutrients.format(),
-                requestQuantity.toString(),
+                requestQuantity,
                 sauceIngredients.expiration.boxed
             )
         }
@@ -237,7 +225,7 @@ class SlotTest : FunSpec({
                     }
                     val consumers = (1..iterations).map {
                         async(Dispatchers.Default) {
-                            slot.get("100")
+                            slot.pull(100)
                         }
                     }
                     successfulAdds = producers.awaitAll().count { it.isSuccess }
@@ -252,7 +240,7 @@ class SlotTest : FunSpec({
 
                 val results = coroutineScope {
                     (1..100).map {
-                        async(Dispatchers.Default) { slot.get("100") }
+                        async(Dispatchers.Default) { slot.pull(100) }
                     }.awaitAll()
                 }
 
@@ -262,8 +250,8 @@ class SlotTest : FunSpec({
 
             pos("`get()` must increment version and return correct snapshot") {
                 Slot.Pack(1).apply { add(meat.format()) }.also { slot ->
-                    val versionStart = slot.currentVersion // version = 1 after add()
-                    slot.get("100").getOrThrow().also { (version, meatStr) -> // version = 2 after get()
+                    val versionStart = slot.currentVersion // version = 1 после add()
+                    slot.pull(100).getOrThrow().also { (version, meatStr) -> // version = 2 после get()
                         version shouldBe (versionStart + 1)
                         meatStr shouldBe meat.format()
                     }
@@ -300,7 +288,7 @@ class SlotTest : FunSpec({
                     // В "процессе" версия должна измениться "неожиданным" вызовом `add`
                     slot.add(meat.format()) // version = 2
 
-                    slot.get("50").getOrThrow().also { (version, _) ->
+                    slot.pull(50).getOrThrow().also { (version, _) ->
                         // "Ожидаем", что версия будет 2, но по факту 3
                         println("\"expecting\" version: ${startVersion + 1} result.version: $version")
                         (version == startVersion + 1) shouldBe false
@@ -316,7 +304,7 @@ class SlotTest : FunSpec({
                 add(meat.format())
                 add(meat.format())
                 add(meat.format())
-            }.get("350").getOrThrow().second.fetchWeightQuantity() shouldNotBeLessThan 350
+            }.pull(350).getOrThrow().second.fetchWeightQuantity() shouldNotBeLessThan 350
         }
     }
 })

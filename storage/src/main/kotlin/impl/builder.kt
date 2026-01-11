@@ -2,7 +2,9 @@ package ru.it_arch.tools.samples.ribeye.storage.impl
 
 import kotlinx.serialization.json.Json
 import ru.it_arch.tools.samples.ribeye.data.Macronutrients
+import ru.it_arch.tools.samples.ribeye.data.Quantity
 import ru.it_arch.tools.samples.ribeye.data.Resource
+import ru.it_arch.tools.samples.ribeye.storage.SlotFactory
 
 internal val json = Json {
     prettyPrint = true
@@ -50,6 +52,14 @@ public fun Macronutrients.format(): String =
 
 public fun String.toMacronutrients(): Macronutrients =
     json.decodeFromString<MacronutrientsImpl>(this)
+
+// Quantity
+
+public fun Long.toQuantity(): Quantity.Weight =
+    QuantityWeightImpl(this)
+
+public fun Int.toQuantity(): Quantity.Piece =
+    QuantityPieceImpl(this)
 
 // Meat
 
@@ -152,3 +162,12 @@ public fun Resource.Rosemary.format(): String =
 
 public fun String.toRosemary(): Resource.Rosemary =
     json.decodeFromString<RosemaryImpl>(this)
+
+// Slot factory
+
+public fun slotFactory(
+    meatCapacity: Quantity.Piece,
+    grillCapacity: Quantity.Weight,
+    sauceCapacity: Quantity.Weight,
+    rosemaryCapacity: Quantity.Piece
+): SlotFactory = SlotFactoryImpl(meatCapacity, grillCapacity, sauceCapacity, rosemaryCapacity)

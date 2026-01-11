@@ -41,6 +41,7 @@ dependencies {
     testImplementation(libs.kotest)
     testImplementation(libs.kotest.assertions)
     testImplementation(libs.kotest.htmlreporter)
+    testImplementation(libs.mockk)
 }
 
 kover {

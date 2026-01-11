@@ -11,17 +11,17 @@ import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.time.Instant
 
 /**
- * Типонезависимый контейнер (слот) хранилища для разных видов ресурсов — упакованных, штучных, весовых.
- * Внутренее представление — строковое, по факту — хардкодинг в JSON-формате. Однако контейнер
+ * Форматонезависимый (условно) слот хранения для разных видов ресурсов — упакованных, штучных, весовых.
+ * Внутренее представление — строковое, по факту — хардкодинг в JSON-формате. Однако слот
  * не должен знать о фактическом формате представления его элементов. Сериализация/десериализация
- * осуществляется уровнем выше.
+ * должна осуществляться уровнем выше.
  * */
 public sealed interface Slot {
 
     /** Вынесен с целью замены для Unit-тестов. По умолчанию — [Dispatchers.Default] */
     public val dispatcher: CoroutineDispatcher
 
-    /** текущая заполненность слота */
+    /** Текущая заполненность слота */
     public suspend fun size(): Number
 
     /**
@@ -42,37 +42,62 @@ public sealed interface Slot {
         protected var isActive: Boolean = true
         protected val mutex: Mutex = Mutex()
 
+        /** Перевод слота в неактивное состояние */
         public fun kill() {
             isActive = false
         }
 
         /**
+         * Извлечение ресурса из слота
          *
-         * @param requestQuantity
-         * @return
+         * @param requestQuantity запрашиваемое количество
+         * @return [Result] ресурса
          * */
-        public abstract suspend fun get(requestQuantity: String): Result<String>
+        public abstract suspend fun pull(requestQuantity: Number): Result<String>
     }
 
     /**
      * Переиспользуемый слот. Состояние ЖЦ определяется сквозной версией [currentVersion]
-     *
-     *
+     * для обеспечения [оптимистической блокировки](https://en.wikipedia.org/wiki/Optimistic_concurrency_control)
      * */
     @OptIn(ExperimentalAtomicApi::class)
     public sealed class Reusable() : Slot {
         protected val mutex: Mutex = Mutex()
+        /** Внутреннее хранение текущей версии слота */
         protected val version: AtomicInt = AtomicInt(0)
+
+        /** Текущая версия слота */
         public val currentVersion: Int
             get() = version.load()
 
-        public abstract suspend fun get(requestQuantity: String): Result<Pair<Int, String>>
+        /**
+         * Извлечение ресурса из слота, если имеется, в количестве не менее требуемого.
+         *
+         * @param requestQuantity требуемое количество
+         * @return [Result] ресурса с версией [ResultWithVersion]
+         * */
+        public abstract suspend fun pull(requestQuantity: Long): Result<ResultWithVersion>
 
+        /**
+         * Добавление ресурса в слот.
+         *
+         * @param resource добавляемый ресурс
+         * @return [Result] новая версия изменившегося слота
+         * */
         public abstract suspend fun add(resource: String): Result<Int>
     }
 
     /**
-     * Поштучное хранение с общим сроком годности.
+     * Поштучное хранение с общим сроком годности. Хранение виртуальное — хранится только
+     * информация о сврйствах ресурса и размере слота. При извлечении ресурса методом [pull] проверяется
+     * текущий размер слота и, если он не меньше запрашиваемого количества, — то генерация ресурса и
+     * соответсвующее уменьшение текущего размера слота. Генерация производится из свойств
+     * [macronutrients], [expiration] и отпущенного количества.
+     *
+     * @param macronutrients свойства ресурса
+     * @param expiration срок годности
+     * @param capacity максимальная вместимость слота
+     * @param dispatcher необходим для подмены в Unit-тестах
      * */
     public class Piece(
         macronutrients: String,
@@ -83,12 +108,15 @@ public sealed interface Slot {
 
         private var _size: Int = capacity
 
-        override suspend fun size(): Int = withContext(dispatcher) {
+        override suspend fun size(): Int {
             check(isActive) { INACTIVE_MESSAGE }
-            mutex.withLock { _size }
+            return withContext(dispatcher) {
+                check(isActive) { INACTIVE_MESSAGE }
+                mutex.withLock { _size }
+            }
         }
 
-        override suspend fun get(requestQuantity: String): Result<String> {
+        override suspend fun pull(requestQuantity: Number): Result<String> {
             check(isActive) { INACTIVE_MESSAGE }
             return withContext(dispatcher) {
                 // Sic! Двойная проверка для строгости
@@ -98,14 +126,10 @@ public sealed interface Slot {
                         ?.also { _size = it }
                         ?.let {
                             // Реально отпускаемое количество может не соответствовать запрашиваемому.
-                            // Здесь можно подменить это значение и потом решать вопрос с ревизией
-                            val resultQuantity = requestQuantity
+                            // Здесь можно подменить это значение и потом решать вопрос с ревизией и ОБХСС :)
+                            val realQuantity = requestQuantity
                             Result.success(
-                                buildResponse(
-                                    macronutrients,
-                                    resultQuantity,
-                                    expiration
-                                )
+                                buildResponse(macronutrients, realQuantity, expiration)
                             )
                         } ?: emptySlot()
                 }
@@ -113,7 +137,17 @@ public sealed interface Slot {
         }
     }
 
-    /** Весовое хранение с общим сроком годности. */
+    /** Весовое хранение с общим сроком годности. Хранение виртуальное — хранится только
+     * информация о сврйствах ресурса и размере слота. При извлечении ресурса методом [pull] проверяется
+     * текущий размер слота и, если он не меньше запрашиваемого количества, — то генерация ресурса и
+     * соответсвующее уменьшение текущего размера слота. Генерация производится из свойств
+     * [macronutrients], [expiration] и отпущенного количества.
+     *
+     * @param macronutrients свойства ресурса
+     * @param expiration срок годности
+     * @param capacity максимальная вместимость слота
+     * @param dispatcher необходим для подмены в Unit-тестах
+     * */
     public class Weight(
         macronutrients: String,
         expiration: Instant,
@@ -123,11 +157,15 @@ public sealed interface Slot {
 
         private var _size: Long = capacity
 
-        override suspend fun size(): Long = withContext(dispatcher) {
-            mutex.withLock { _size }
+        override suspend fun size(): Long {
+            check(isActive) { INACTIVE_MESSAGE }
+            return withContext(dispatcher) {
+                check(isActive) { INACTIVE_MESSAGE }
+                mutex.withLock { _size }
+            }
         }
 
-        override suspend fun get(requestQuantity: String): Result<String> {
+        override suspend fun pull(requestQuantity: Number): Result<String> {
             check(isActive) { INACTIVE_MESSAGE }
             return withContext(dispatcher) {
                 // Sic! Двойная проверка для строгости
@@ -137,14 +175,10 @@ public sealed interface Slot {
                         ?.also { _size = it }
                         ?.let {
                             // Реально отпускаемое количество может не соответствовать запрашиваемому.
-                            // Усушка, утруска, обвес и прочая складская магия :-)
-                            val resultQuantity = requestQuantity
+                            // Усушка, утруска, обвес и прочая складская магия :)
+                            val realQuantity = requestQuantity
                             Result.success(
-                                buildResponse(
-                                    macronutrients,
-                                    resultQuantity,
-                                    expiration
-                                )
+                                buildResponse(macronutrients, realQuantity, expiration)
                             )
                         } ?: emptySlot()
                 }
@@ -152,7 +186,13 @@ public sealed interface Slot {
         }
     }
 
-    /** Поштучное хранение ресурса в упаковке со своим сроком годности и весом/кол-вом. */
+    /**
+     * Поштучное хранение ресурса в упаковке со своими свойствами срока годности и весом/кол-вом.
+     * Хранение реальное в колекции [ArrayDeque].
+     *
+     * @param capacity максимальная вместимость слота
+     * @param dispatcher необходим для подмены в Unit-тестах
+     * */
     @OptIn(ExperimentalAtomicApi::class)
     public class Pack(
         private val capacity: Int,
@@ -165,21 +205,15 @@ public sealed interface Slot {
             mutex.withLock { slot.size }
         }
 
-        /**
-         * Получение
-         * */
-        override suspend fun get(requestQuantity: String): Result<Pair<Int, String>> =
+        override suspend fun pull(requestQuantity: Long): Result<ResultWithVersion> =
             withContext(dispatcher) {
                 mutex.withLock {
-                    // Найти подходящий ресурс в слоте по критерию веса — большего или равным запрашиваемому
+                    // Найти подходящий ресурс в слоте по критерию веса — не менее запрашиваемому
                     // и извлечь его из слота
-                    requestQuantity.toIntOrNull()?.let { intQuantity ->
-                        slot.firstOrNull { it quantityIsNotLessThan intQuantity }
-                            ?.let { el ->
-                                Result.success(version.incrementAndFetch() to el)
-                                    .also { slot.remove(el) }
-                            } ?: Result.failure((SlotError("Slot is empty")))
-                    } ?: error("request quantity must be Int")
+                    slot.firstOrNull { it quantityIsNotLessThan requestQuantity }?.let { el ->
+                        Result.success(version.incrementAndFetch() to el)
+                            .also { slot.remove(el) }
+                    } ?: Result.failure((SlotError("Slot is empty")))
                 }
             }
 
@@ -193,16 +227,21 @@ public sealed interface Slot {
         }
 
         /**
+         * Поиск ресурса с требуемым количеством.
+         *
          * @receiver строковое представление ресурса
          * @param request запрашиваемое количество
          * @return результат поиска
          * */
-        private infix fun String.quantityIsNotLessThan(request: Int): Boolean =
-            FIND_QUNTITY_RE.find(this)?.groupValues?.get(1)?.toIntOrNull()?.let { it >= request }
-                ?: false
+        private infix fun String.quantityIsNotLessThan(request: Long): Boolean =
+            FIND_QUANTITY_RE.find(this)?.groupValues?.get(1)?.toLongOrNull()
+                ?.let { it >= request } ?: false
+
+        override fun toString(): String =
+            "[capacity: $capacity, version: $currentVersion, dispatcher: $dispatcher]"
 
         private companion object {
-            val FIND_QUNTITY_RE = """"quantity"\s*:\s*(\d+)""".toRegex()
+            val FIND_QUANTITY_RE = """"quantity"\s*:\s*(\d+)""".toRegex()
         }
     }
 
@@ -224,9 +263,9 @@ public sealed interface Slot {
          *  Полагается, что слоты хранят элементы в виде строки (JSON).
          *  Реальное хранение заменяется генерацией элемента .
          */
-        public fun buildResponse(macronutrients: String, quantity: String, expiration: Instant): String =
+        public fun buildResponse(macronutrients: String, quantity: Number, expiration: Instant): String =
             RESOURCE_TEMPLATE.replace(MACRONUTRIENTS_PLACEHOLDER, macronutrients)
-                .replace(QUANTITY_PLACEHOLDER, quantity)
+                .replace(QUANTITY_PLACEHOLDER, quantity.toString())
                 .replace(EXPIRATION_PLACEHOLDER, expiration.toString())
     }
 }
