@@ -36,8 +36,8 @@ tasks.withType<Test>().configureEach {
 
 testlogger {
     setTheme("mocha-parallel")
-    showPassedStandardStreams = false
-    showStandardStreams = false
+    showPassedStandardStreams = true
+    showStandardStreams = true
     showSimpleNames = true
 }
 

@@ -1,6 +1,7 @@
 package ru.it_arch.tools.samples.ribeye.storage
 
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.longs.shouldBeInRange
 import io.kotest.matchers.result.shouldBeFailure
 import io.kotest.matchers.result.shouldBeSuccess
 import io.kotest.matchers.shouldBe
@@ -37,6 +38,7 @@ import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -327,19 +329,21 @@ class StorageTest: FunSpec({
 
             runTest {
                 val startTime = currentTime
-                // !!!
                 val result = storage.pull<Resource.Meat>(QuantityWeightImpl(100))
 
-                // Verification
                 result.isSuccess shouldBe true
                 result.getOrThrow() shouldBe meatSuccess
 
-                // Verify Virtual Time:
-                // Attempt 1 fails -> delay(100ms)
-                // Attempt 2 fails -> delay(200ms)
-                // Total virtual time: 300ms. Real time: ~0ms.
+                // Проверка задержки. Время виртуальное:
+                // первая попытка с выбросом исключения -> delay(Storage.BASE_DELAY)
+                // вторая попытка с выбросом исключения -> delay(Storage.BASE_DELAY * Storage.EXP)
+                // Общее время: delay(BASE_DELAY * Storage.EXP + BASE_DELAY)
 
-                currentTime - startTime shouldBe 300L
+                val jitter = ((Storage.BASE_DELAY * Storage.EXP + Storage.BASE_DELAY) * Storage.JITTER_FACTOR).toLong()
+
+                val elapsed = currentTime - startTime
+                println("elapsed range: [${elapsed - jitter}, ${elapsed + jitter}] ms, jitter: $jitter")
+                elapsed shouldBeInRange (elapsed - jitter)..(elapsed + jitter)
             }
         }
     }

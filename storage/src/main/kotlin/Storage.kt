@@ -15,9 +15,12 @@ import ru.it_arch.tools.samples.ribeye.storage.impl.toSauceIngredients
 import ru.it_arch.tools.samples.ribeye.storage.impl.format
 import ru.it_arch.tools.samples.ribeye.storage.slot.Slot
 import kotlin.math.pow
+import kotlin.random.Random
 import kotlin.reflect.KClass
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.DurationUnit
 
 /**
  *
@@ -199,9 +202,26 @@ public class Storage(
         } ?: resource.rotten()
 
     public companion object {
+        /** Количество попыток доступа к ресурсу */
         private const val ATTEMPTS = 3
+        /** База расчета задержки ms */
+        internal val BASE_DELAY = 100
+        /** Основание экспоненты */
+        internal val EXP = 2.0
 
-        /** Расчет экспонентциальной задержки */
-        private fun Int.nextDelay() = 100.milliseconds * 2.0.pow(this)
+        /** Фактор девиации экспоненциальной задержки (%) */
+        internal const val JITTER_FACTOR = 0.07
+
+        /**
+         * Расчет экспонентциальной задержки
+         *
+         * @receiver номер попытки
+         * @return [Duration] необходимая задержка
+         * */
+        private fun Int.nextDelay(): Duration =
+            (BASE_DELAY * EXP.pow(this)).let { base ->
+                (base * JITTER_FACTOR).toInt()
+                    .let { (base + Random.nextInt(-it, it)).milliseconds }
+            }
     }
 }
