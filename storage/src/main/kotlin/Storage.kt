@@ -39,7 +39,10 @@ public class Storage(
     }
 
     private suspend fun setSlot(type: KClass<out Resource>, slot: Slot) {
-        mutex.withLock { _slots[type] = slot }
+        mutex.withLock {
+            _slots[type]?.also { if (it is Slot.Disposable) it.kill() }
+            _slots[type] = slot
+        }
     }
 
     /**
@@ -166,8 +169,6 @@ public class Storage(
         else -> error("Unknown resource type: ${type.simpleName}")
     }
 
-    // Удить предыдущего!!!
-
     override suspend fun <T : Resource> putByType(type: KClass<out T>, resource: T): Result<Unit> =
         when(type) {
             // Используем имеющийся слот, если есть
@@ -184,7 +185,7 @@ public class Storage(
             }.also { setSlot(type, it) }.let { Result.success(Unit) }
 
             Resource.SauceIngredients::class -> (resource as Resource.SauceIngredients).let { sauce ->
-                slotFactory.slotForGrill(sauce.macronutrients,sauce.expiration)
+                slotFactory.slotForSauce(sauce.macronutrients,sauce.expiration)
             }.also { setSlot(type, it) }.let { Result.success(Unit) }
 
             Resource.Rosemary::class -> (resource as Resource.Rosemary).let { rosemary ->

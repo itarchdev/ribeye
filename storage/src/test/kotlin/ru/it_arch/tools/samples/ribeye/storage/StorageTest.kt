@@ -28,6 +28,8 @@ import ru.it_arch.tools.samples.ribeye.storage.impl.format
 import ru.it_arch.tools.samples.ribeye.storage.impl.grill
 import ru.it_arch.tools.samples.ribeye.storage.impl.macronutrients
 import ru.it_arch.tools.samples.ribeye.storage.impl.meat
+import ru.it_arch.tools.samples.ribeye.storage.impl.rosemary
+import ru.it_arch.tools.samples.ribeye.storage.impl.sauceIngredients
 import ru.it_arch.tools.samples.ribeye.storage.impl.slotFactory
 import ru.it_arch.tools.samples.ribeye.storage.impl.toQuantity
 import ru.it_arch.tools.samples.ribeye.storage.slot.Slot
@@ -95,7 +97,8 @@ class StorageTest: FunSpec({
             )
             val mockedSlotFactory = mockk<SlotFactory>()
             every { mockedSlotFactory.slotForGrill(any(), any()) } returns grillSlot
-            val storage: ResourceRepository = Storage(mockedSlotFactory)
+            val slots: Map<KClass<out Resource>, Slot> = mapOf(Resource.Grill::class to grillSlot)
+            val storage: ResourceRepository = Storage(mockedSlotFactory, slots)
 
             // Эмуляция конкурентного доступа к слоту
             runTest(testDispatcher) {
@@ -107,10 +110,16 @@ class StorageTest: FunSpec({
                     storage.size<Resource.Grill, Quantity.Weight>()
                 }
 
-                // Делаем бяку: пока корутина в Slot.size() { withContext { ... } } на паузе в
-                // очереди у StandardTestDispatcher, чтобы потом словить исключение как и
-                // запланировано логикой теста.
-                grillSlot.kill()
+                // Делаем бяку: изменяем состояние слота путем добавления нового ресурса, что должно
+                // убить текущий слот и создать новый. В это время корутина в Slot.size() { withContext { ... } }
+                // на паузе в очереди у StandardTestDispatcher. Потом ловим исключение при
+                // выполнении операции, как и запланировано логикой теста.
+                grill {
+                    macronutrients = MacronutrientsImpl.DEFAULT
+                    quantity = 100
+                    expiration = Instant.DISTANT_FUTURE
+                }.also { storage.put(it) }
+
 
                 // Дергаем testDispatcher на выполнение корутины `withContext` в Slot.size()
                 // Она выкинет исключение при проверке своего состояния: второй ckeck(isActive) в Slot.Weight
@@ -118,6 +127,130 @@ class StorageTest: FunSpec({
 
                 // Выполняем операцию чтения со слотом и получаем 0 вместо 100
                 deferredStorageSizeExecution.await() shouldBe 0L.toQuantity()
+            }
+        }
+    }
+
+    context("Sauce slot") {
+        pos("Empty slot must return size 0") {
+            emptyStorage.size<Resource.SauceIngredients, Quantity.Weight>() shouldBe 0L.toQuantity()
+        }
+
+        neg("Empty slot.get() must return notFound result") {
+            emptyStorage.pull<Resource.SauceIngredients>(10L.toQuantity())
+                .shouldBeFailure<StorageError.NotFound>()
+        }
+
+        pos("must successfully put(), pull() and exact size 10") {
+            val sauceCapacity = 100L.toQuantity()
+            val requestQuantity = 90L.toQuantity()
+
+            val storage = slotFactory(
+                0.toQuantity(),
+                0L.toQuantity(),
+                sauceCapacity,
+                0.toQuantity()
+            ).let(::Storage)
+
+            val sauce = sauceIngredients {
+                macronutrients = MacronutrientsImpl.DEFAULT
+                quantity = requestQuantity.boxed
+                expiration = Instant.DISTANT_FUTURE
+            }
+            storage.put(sauce) shouldBeSuccess Unit
+            storage.pull<Resource.SauceIngredients>(requestQuantity) shouldBeSuccess sauce
+            storage.size<Resource.SauceIngredients, Quantity.Weight>() shouldBe (sauceCapacity - sauce.quantity)
+        }
+
+        // С.м. Grill test
+        neg("Killed slot must return size 0") {
+            val testDispatcher = StandardTestDispatcher()
+            val sauceSlot = Slot.Weight(
+                MacronutrientsImpl.DEFAULT.format(),
+                Instant.DISTANT_FUTURE,
+                100L,
+                testDispatcher
+            )
+            val mockedSlotFactory = mockk<SlotFactory>()
+            every { mockedSlotFactory.slotForSauce(any(), any()) } returns sauceSlot
+            val slots: Map<KClass<out Resource>, Slot> = mapOf(Resource.SauceIngredients::class to sauceSlot)
+            val storage: ResourceRepository = Storage(mockedSlotFactory, slots)
+
+            runTest(testDispatcher) {
+                val deferredStorageSizeExecution = async(SupervisorJob()) {
+                    storage.size<Resource.SauceIngredients, Quantity.Weight>()
+                }
+
+                sauceIngredients {
+                    macronutrients = MacronutrientsImpl.DEFAULT
+                    quantity = 100
+                    expiration = Instant.DISTANT_FUTURE
+                }.also { storage.put(it) }
+
+                advanceUntilIdle()
+                deferredStorageSizeExecution.await() shouldBe 0L.toQuantity()
+            }
+        }
+    }
+
+    context("Rosemary slot") {
+        pos("Empty slot must return size 0") {
+            emptyStorage.size<Resource.Rosemary, Quantity.Piece>() shouldBe 0.toQuantity()
+        }
+
+        neg("Empty slot.get() must return notFound result") {
+            emptyStorage.pull<Resource.Rosemary>(10.toQuantity())
+                .shouldBeFailure<StorageError.NotFound>()
+        }
+
+        pos("must successfully put(), pull() and exact size 10") {
+            val rosemaryCapacity = 100.toQuantity()
+            val requestQuantity = 90.toQuantity()
+
+            val storage = slotFactory(
+                0.toQuantity(),
+                0L.toQuantity(),
+                0L.toQuantity(),
+                rosemaryCapacity
+            ).let(::Storage)
+
+            val rosemary = rosemary {
+                macronutrients = MacronutrientsImpl.DEFAULT
+                quantity = requestQuantity.boxed
+                expiration = Instant.DISTANT_FUTURE
+            }
+            storage.put(rosemary) shouldBeSuccess Unit
+            storage.pull<Resource.Rosemary>(requestQuantity) shouldBeSuccess rosemary
+            storage.size<Resource.Rosemary, Quantity.Weight>() shouldBe (rosemaryCapacity - rosemary.quantity)
+        }
+
+        // С.м. Grill test
+        neg("Killed slot must return size 0") {
+            val testDispatcher = StandardTestDispatcher()
+            val rosemarySlot = Slot.Weight(
+                MacronutrientsImpl.DEFAULT.format(),
+                Instant.DISTANT_FUTURE,
+                100,
+                testDispatcher
+            )
+            val mockedSlotFactory = mockk<SlotFactory>()
+            every { mockedSlotFactory.slotForRosemary(any(), any()) } returns rosemarySlot
+            val slots: Map<KClass<out Resource>, Slot> = mapOf(Resource.Rosemary::class to rosemarySlot)
+            val storage: ResourceRepository = Storage(mockedSlotFactory, slots)
+
+            runTest(testDispatcher) {
+                val deferredStorageSizeExecution = async(SupervisorJob()) {
+                    storage.size<Resource.Rosemary, Quantity.Piece>()
+                }
+
+                rosemary {
+                    macronutrients = MacronutrientsImpl.DEFAULT
+                    quantity = 100
+                    expiration = Instant.DISTANT_FUTURE
+                }.also { storage.put(it) }
+
+                advanceUntilIdle()
+                deferredStorageSizeExecution.await() shouldBe 0.toQuantity()
             }
         }
     }
