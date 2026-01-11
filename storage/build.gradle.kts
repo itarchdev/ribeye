@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.test.report)
     alias(libs.plugins.kover)
+    alias(libs.plugins.test.logger)
 }
 
 kotlin {
@@ -21,15 +22,23 @@ tasks.withType<Test>().configureEach {
     useJUnitPlatform()
 
     testLogging {
-        showStandardStreams = true
-        showExceptions = true
+        showStandardStreams = false
+        //showExceptions = true
         // disable reports. Max OS crash
         reports {
             html.required.set(false)
             junitXml.required.set(true)
         }
-        events("passed", "skipped", "failed", "standard_out")
+        //events("passed", "skipped", "failed", "standard_out")
+        events.clear()
     }
+}
+
+testlogger {
+    setTheme("mocha-parallel")
+    showPassedStandardStreams = false
+    showStandardStreams = false
+    showSimpleNames = true
 }
 
 dependencies {

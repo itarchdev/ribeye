@@ -6,6 +6,9 @@ import ru.it_arch.tools.samples.ribeye.data.Quantity
 import ru.it_arch.tools.samples.ribeye.storage.SlotFactory
 import ru.it_arch.tools.samples.ribeye.storage.slot.Slot
 
+/**
+ * Фабрика создания слотов. Реализация для обычного использования.
+ * */
 internal class SlotFactoryImpl(
     private val meatCapacity: Quantity.Piece,
     private val grillCapacity: Quantity.Weight,

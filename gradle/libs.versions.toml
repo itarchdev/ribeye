@@ -16,6 +16,7 @@ kover = "0.9.4"
 kotest = "6.0.7"
 mockk = "1.14.7"
 test-report = "1.4"
+test-logger = "4.0.0"
 
 [libraries]
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -38,5 +39,6 @@ versions = { id = "com.github.ben-manes.versions", version.ref = "versions" }
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 vanniktech = { id = "com.vanniktech.maven.publish", version.ref = "vanniktech" }
 # tests
+test-logger = { id = "com.adarshr.test-logger", version.ref = "test-logger" }
 test-report = { id = "com.monnage.test-report", version.ref = "test-report" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }

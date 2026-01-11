@@ -35,6 +35,7 @@ import ru.it_arch.tools.samples.ribeye.storage.impl.toQuantity
 import ru.it_arch.tools.samples.ribeye.storage.slot.Slot
 import kotlin.reflect.KClass
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Instant
 
@@ -47,6 +48,23 @@ class StorageTest: FunSpec({
         0L.toQuantity(),
         0.toQuantity()
     ).let(::Storage)
+
+    neg("Expired resource must not be added") {
+        val rottenSauce = sauceIngredients {
+            macronutrients = MacronutrientsImpl.DEFAULT
+            quantity = 10
+            expiration = Clock.System.now() - 10.days
+        }
+
+        val storage = slotFactory(
+            0.toQuantity(),
+            0L.toQuantity(),
+            100L.toQuantity(),
+            0.toQuantity()
+        ).let(::Storage)
+
+        storage.put(rottenSauce).shouldBeFailure<StorageError.RottenResource>()
+    }
 
     context("Grill slot") {
         pos("Empty slot must return size 0") {
@@ -256,42 +274,7 @@ class StorageTest: FunSpec({
     }
 
     context("Meat slot") {
-        pos("Empty slot must return size 0") {
-            emptyStorage.size<Resource.Meat, Quantity.Piece>() shouldBe 0.toQuantity()
-        }
-
-        neg("Empty slot.get() must return notFound result") {
-            emptyStorage.pull<Resource.Meat>(10L.toQuantity())
-                .shouldBeFailure<StorageError.NotFound>()
-        }
-
-        /*
-        pos("must successfully put(), pull() and exact size 0") {
-            val meatCapacity = 3.toQuantity()
-            val requestQuantity = 350L.toQuantity()
-
-            val storage = slotFactory(
-                meatCapacity,
-                0L.toQuantity(),
-                0L.toQuantity(),
-                0.toQuantity()
-            ).let(::Storage)
-
-            val meat = meat {
-                macronutrients = MacronutrientsImpl.DEFAULT
-                quantity = requestQuantity.boxed
-                expiration = Instant.DISTANT_FUTURE
-            }
-            storage.put(meat) shouldBeSuccess Unit
-            storage.pull<Resource.Rosemary>(requestQuantity) shouldBeSuccess meat
-            storage.size<Resource.Rosemary, Quantity.Weight>() shouldBe (meatCapacity - meat.quantity)
-        }*/
-
-    }
-
-    xcontext("Meat slot") {
-
-        val meatTest = meat {
+        val meatStub = meat {
             macronutrients = macronutrients {
                 proteins = 20.0
                 fats = 19.0
@@ -301,8 +284,27 @@ class StorageTest: FunSpec({
             quantity = 350
             expiration = Clock.System.now() + 48.hours
         }
+        val meatSuccess = meat {
+            macronutrients = macronutrients {
+                proteins = 20.0
+                fats = 19.0
+                carbs = 0.0
+                calories = 260.0
+            }
+            quantity = 300
+            expiration = Clock.System.now() + 48.hours
+        }
 
-        pos("get() should apply exponential backoff on retries") {
+        pos("Empty slot must return size 0") {
+            emptyStorage.size<Resource.Meat, Quantity.Piece>() shouldBe 0.toQuantity()
+        }
+
+        neg("Empty slot.get() must return notFound result") {
+            emptyStorage.pull<Resource.Meat>(10L.toQuantity())
+                .shouldBeFailure<StorageError.NotFound>()
+        }
+
+        pos("pull() should apply exponential backoff on retries") {
             val meatSlotStubVersion = 10
             val mockedMeatSlot = mockk<Slot.Reusable>()
             every { mockedMeatSlot.currentVersion } returns meatSlotStubVersion
@@ -313,19 +315,15 @@ class StorageTest: FunSpec({
             // 2. Second call: Returns version 14 (Drift detected: 14 != 10 + 1) -> Retry
             // 3. Third call: Returns version 11 (Success: 11 == 10 + 1) -> Success
             coEvery { mockedMeatSlot.pull(any()) } returns
-                    Result.success(12 to "Data") andThen
-                    Result.success(14 to "Data") andThen
-                    Result.success((meatSlotStubVersion + 1) to "Success")
+                    Result.success(12 to meatStub.format()) andThen
+                    Result.success(14 to meatStub.format()) andThen
+                    Result.success((meatSlotStubVersion + 1) to meatSuccess.format())
 
             val mockedSlotFactory = mockk<SlotFactory>()
             every { mockedSlotFactory.slotForMeat() } returns mockedMeatSlot
             val slots: Map<KClass<out Resource>, Slot> = mapOf(Resource.Meat::class to mockedMeatSlot)
 
             val storage: ResourceRepository = Storage(mockedSlotFactory, slots)
-            // Нужно добавить какой-нибудь ресурс, чтобы проинициализировать meat-слот в Storage,
-            // который будет mockedMeatSlot. Сам этот ресурс выдаваться не будет, т.к. слот "замокан"
-            // и будет выдавать вышеопределенные значения
-            //storage.put(mockk<Resource.Meat>())
 
             runTest {
                 val startTime = currentTime
@@ -334,14 +332,14 @@ class StorageTest: FunSpec({
 
                 // Verification
                 result.isSuccess shouldBe true
-                result.getOrNull() shouldBe "Success"
+                result.getOrThrow() shouldBe meatSuccess
 
                 // Verify Virtual Time:
                 // Attempt 1 fails -> delay(100ms)
                 // Attempt 2 fails -> delay(200ms)
                 // Total virtual time: 300ms. Real time: ~0ms.
 
-                //currentTime - startTime shouldBe 300L
+                currentTime - startTime shouldBe 300L
             }
         }
     }
