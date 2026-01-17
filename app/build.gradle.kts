@@ -26,5 +26,5 @@ application {
 }
 
 dependencies {
-    api(project(":api"))
+    implementation(project(":storage"))
 }

@@ -11,7 +11,7 @@ import kotlin.time.Instant
 internal data class OpCompletedImpl<T : Op> private constructor(
     override val result: Result<OpResult<T>>,
     override val timestamp: Instant = Clock.System.now(),
-): Event.OpCompleted<T> {
+) : Event.OpCompleted<T> {
     init {
         validate()
     }
@@ -21,7 +21,7 @@ internal data class OpCompletedImpl<T : Op> private constructor(
     }
 
     companion object {
-        fun <T : Op> opCompleted(result: Result<OpResult<T>>) =
+        fun <T : Op> opCompleted(result: Result<OpResult<T>>): Event.OpCompleted<T> =
             OpCompletedImpl(result)
     }
 }

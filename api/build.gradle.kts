@@ -16,5 +16,6 @@ kotlin {
 
 dependencies {
     api(libs.k3dm)
+    api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.datetime)
 }

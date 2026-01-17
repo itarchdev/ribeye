@@ -1,21 +1,26 @@
 package ru.it_arch.tools.samples.ribeye.app
 
+import ru.it_arch.tools.samples.ribeye.ResourceRepository
+import ru.it_arch.tools.samples.ribeye.data.Resource
+import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
 import ru.it_arch.tools.samples.ribeye.dsl.impl.cookingProcess
-import ru.it_arch.tools.samples.ribeye.storage.ResourceOld
+import ru.it_arch.tools.samples.ribeye.pull
+import ru.it_arch.tools.samples.ribeye.storage.impl.toWeight
 
-// Это повар
+/* Это повар. ЧТО делать. Здесь задаются бизнес-правила.
 val interpreter = cookingProcess {
     getMeat = { storage ->
-        val meat = storage.get(ResourceOld.Meat::class)
+        val meat = storage.pull<Resource.Meat>(350L.toWeight())
         Result.success()
     }
     listener = { event ->
         println(event)
     }
-}
+}*/
+
 
 /*
-* // Логика работы. Use case
+*  Логика работы. Use case
 fun ModuleProcess.run(
     module: Module,
     versionType: VersionType = VersionType.PATCH

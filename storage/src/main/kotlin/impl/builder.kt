@@ -55,10 +55,10 @@ public fun String.toMacronutrients(): Macronutrients =
 
 // Quantity
 
-public fun Long.toQuantity(): Quantity.Weight =
+public fun Long.toWeight(): Quantity.Weight =
     QuantityWeightImpl(this)
 
-public fun Int.toQuantity(): Quantity.Piece =
+public fun Int.toPiece(): Quantity.Piece =
     QuantityPieceImpl(this)
 
 // Meat

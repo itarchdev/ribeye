@@ -32,23 +32,23 @@ import ru.it_arch.tools.samples.ribeye.storage.impl.meat
 import ru.it_arch.tools.samples.ribeye.storage.impl.rosemary
 import ru.it_arch.tools.samples.ribeye.storage.impl.sauceIngredients
 import ru.it_arch.tools.samples.ribeye.storage.impl.slotFactory
-import ru.it_arch.tools.samples.ribeye.storage.impl.toQuantity
+import ru.it_arch.tools.samples.ribeye.storage.impl.toPiece
+import ru.it_arch.tools.samples.ribeye.storage.impl.toWeight
 import ru.it_arch.tools.samples.ribeye.storage.slot.Slot
 import kotlin.reflect.KClass
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
-import kotlin.time.DurationUnit
 import kotlin.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class StorageTest: FunSpec({
 
     val emptyStorage: ResourceRepository = slotFactory(
-        0.toQuantity(),
-        0L.toQuantity(),
-        0L.toQuantity(),
-        0.toQuantity()
+        0.toPiece(),
+        0L.toWeight(),
+        0L.toWeight(),
+        0.toPiece()
     ).let(::Storage)
 
     neg("Expired resource must not be added") {
@@ -59,10 +59,10 @@ class StorageTest: FunSpec({
         }
 
         val storage = slotFactory(
-            0.toQuantity(),
-            0L.toQuantity(),
-            100L.toQuantity(),
-            0.toQuantity()
+            0.toPiece(),
+            0L.toWeight(),
+            100L.toWeight(),
+            0.toPiece()
         ).let(::Storage)
 
         storage.put(rottenSauce).shouldBeFailure<StorageError.RottenResource>()
@@ -70,23 +70,23 @@ class StorageTest: FunSpec({
 
     context("Grill slot") {
         pos("Empty slot must return size 0") {
-            emptyStorage.size<Resource.Grill, Quantity.Weight>() shouldBe 0L.toQuantity()
+            emptyStorage.size<Resource.Grill, Quantity.Weight>() shouldBe 0L.toWeight()
         }
 
         neg("Empty slot.get() must return notFound result") {
-            emptyStorage.pull<Resource.Grill>(10L.toQuantity())
+            emptyStorage.pull<Resource.Grill>(10L.toWeight())
                 .shouldBeFailure<StorageError.NotFound>()
         }
 
         pos("must successfully put(), pull() and exact size 10") {
-            val grillCapacity = 100L.toQuantity()
-            val requestQuantity = 90L.toQuantity()
+            val grillCapacity = 100L.toWeight()
+            val requestQuantity = 90L.toWeight()
 
             val storage = slotFactory(
-                0.toQuantity(),
+                0.toPiece(),
                 grillCapacity,
-                0L.toQuantity(),
-                0.toQuantity()
+                0L.toWeight(),
+                0.toPiece()
             ).let(::Storage)
 
             val grill = grill {
@@ -146,30 +146,30 @@ class StorageTest: FunSpec({
                 advanceUntilIdle()
 
                 // Выполняем операцию чтения со слотом и получаем 0 вместо 100
-                deferredStorageSizeExecution.await() shouldBe 0L.toQuantity()
+                deferredStorageSizeExecution.await() shouldBe 0L.toWeight()
             }
         }
     }
 
     context("Sauce slot") {
         pos("Empty slot must return size 0") {
-            emptyStorage.size<Resource.SauceIngredients, Quantity.Weight>() shouldBe 0L.toQuantity()
+            emptyStorage.size<Resource.SauceIngredients, Quantity.Weight>() shouldBe 0L.toWeight()
         }
 
         neg("Empty slot.get() must return notFound result") {
-            emptyStorage.pull<Resource.SauceIngredients>(10L.toQuantity())
+            emptyStorage.pull<Resource.SauceIngredients>(10L.toWeight())
                 .shouldBeFailure<StorageError.NotFound>()
         }
 
         pos("must successfully put(), pull() and exact size 10") {
-            val sauceCapacity = 100L.toQuantity()
-            val requestQuantity = 90L.toQuantity()
+            val sauceCapacity = 100L.toWeight()
+            val requestQuantity = 90L.toWeight()
 
             val storage = slotFactory(
-                0.toQuantity(),
-                0L.toQuantity(),
+                0.toPiece(),
+                0L.toWeight(),
                 sauceCapacity,
-                0.toQuantity()
+                0.toPiece()
             ).let(::Storage)
 
             val sauce = sauceIngredients {
@@ -208,29 +208,29 @@ class StorageTest: FunSpec({
                 }.also { storage.put(it) }
 
                 advanceUntilIdle()
-                deferredStorageSizeExecution.await() shouldBe 0L.toQuantity()
+                deferredStorageSizeExecution.await() shouldBe 0L.toWeight()
             }
         }
     }
 
     context("Rosemary slot") {
         pos("Empty slot must return size 0") {
-            emptyStorage.size<Resource.Rosemary, Quantity.Piece>() shouldBe 0.toQuantity()
+            emptyStorage.size<Resource.Rosemary, Quantity.Piece>() shouldBe 0.toPiece()
         }
 
         neg("Empty slot.get() must return notFound result") {
-            emptyStorage.pull<Resource.Rosemary>(10.toQuantity())
+            emptyStorage.pull<Resource.Rosemary>(10.toPiece())
                 .shouldBeFailure<StorageError.NotFound>()
         }
 
         pos("must successfully put(), pull() and exact size 10") {
-            val rosemaryCapacity = 100.toQuantity()
-            val requestQuantity = 90.toQuantity()
+            val rosemaryCapacity = 100.toPiece()
+            val requestQuantity = 90.toPiece()
 
             val storage = slotFactory(
-                0.toQuantity(),
-                0L.toQuantity(),
-                0L.toQuantity(),
+                0.toPiece(),
+                0L.toWeight(),
+                0L.toWeight(),
                 rosemaryCapacity
             ).let(::Storage)
 
@@ -270,7 +270,7 @@ class StorageTest: FunSpec({
                 }.also { storage.put(it) }
 
                 advanceUntilIdle()
-                deferredStorageSizeExecution.await() shouldBe 0.toQuantity()
+                deferredStorageSizeExecution.await() shouldBe 0.toPiece()
             }
         }
     }
@@ -298,11 +298,11 @@ class StorageTest: FunSpec({
         }
 
         pos("Empty slot must return size 0") {
-            emptyStorage.size<Resource.Meat, Quantity.Piece>() shouldBe 0.toQuantity()
+            emptyStorage.size<Resource.Meat, Quantity.Piece>() shouldBe 0.toPiece()
         }
 
         neg("Empty slot.get() must return notFound result") {
-            emptyStorage.pull<Resource.Meat>(10L.toQuantity())
+            emptyStorage.pull<Resource.Meat>(10L.toWeight())
                 .shouldBeFailure<StorageError.NotFound>()
         }
 
