@@ -17,7 +17,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
-import ru.it_arch.tools.samples.ribeye.ResourceRepository
+import ru.it_arch.tools.samples.ribeye.WriteResourceRepository
 import ru.it_arch.tools.samples.ribeye.data.Quantity
 import ru.it_arch.tools.samples.ribeye.data.Resource
 import ru.it_arch.tools.samples.ribeye.pull
@@ -44,7 +44,7 @@ import kotlin.time.Instant
 @OptIn(ExperimentalCoroutinesApi::class)
 class StorageTest: FunSpec({
 
-    val emptyStorage: ResourceRepository = slotFactory(
+    val emptyStorage: WriteResourceRepository = slotFactory(
         0.toPiece(),
         0L.toWeight(),
         0L.toWeight(),
@@ -118,7 +118,7 @@ class StorageTest: FunSpec({
             val mockedSlotFactory = mockk<SlotFactory>()
             every { mockedSlotFactory.slotForGrill(any(), any()) } returns grillSlot
             val slots: Map<KClass<out Resource>, Slot> = mapOf(Resource.Grill::class to grillSlot)
-            val storage: ResourceRepository = Storage(mockedSlotFactory, slots)
+            val storage: WriteResourceRepository = Storage(mockedSlotFactory, slots)
 
             // Эмуляция конкурентного доступа к слоту
             runTest(testDispatcher) {
@@ -194,7 +194,7 @@ class StorageTest: FunSpec({
             val mockedSlotFactory = mockk<SlotFactory>()
             every { mockedSlotFactory.slotForSauce(any(), any()) } returns sauceSlot
             val slots: Map<KClass<out Resource>, Slot> = mapOf(Resource.SauceIngredients::class to sauceSlot)
-            val storage: ResourceRepository = Storage(mockedSlotFactory, slots)
+            val storage: WriteResourceRepository = Storage(mockedSlotFactory, slots)
 
             runTest(testDispatcher) {
                 val deferredStorageSizeExecution = async(SupervisorJob()) {
@@ -256,7 +256,7 @@ class StorageTest: FunSpec({
             val mockedSlotFactory = mockk<SlotFactory>()
             every { mockedSlotFactory.slotForRosemary(any(), any()) } returns rosemarySlot
             val slots: Map<KClass<out Resource>, Slot> = mapOf(Resource.Rosemary::class to rosemarySlot)
-            val storage: ResourceRepository = Storage(mockedSlotFactory, slots)
+            val storage: WriteResourceRepository = Storage(mockedSlotFactory, slots)
 
             runTest(testDispatcher) {
                 val deferredStorageSizeExecution = async(SupervisorJob()) {
@@ -325,7 +325,7 @@ class StorageTest: FunSpec({
             every { mockedSlotFactory.slotForMeat() } returns mockedMeatSlot
             val slots: Map<KClass<out Resource>, Slot> = mapOf(Resource.Meat::class to mockedMeatSlot)
 
-            val storage: ResourceRepository = Storage(mockedSlotFactory, slots)
+            val storage: WriteResourceRepository = Storage(mockedSlotFactory, slots)
 
             runTest {
                 val startTime = currentTime

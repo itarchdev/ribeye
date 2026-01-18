@@ -1,7 +1,7 @@
 package ru.it_arch.tools.samples.ribeye.dsl.impl
 
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.ResourceRepository
+import ru.it_arch.tools.samples.ribeye.WriteResourceRepository
 import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
 import ru.it_arch.tools.samples.ribeye.dsl.Event
 import ru.it_arch.tools.samples.ribeye.dsl.Op
@@ -33,15 +33,15 @@ public data class CookingProcessImpl private constructor(
     }
 
     public class Builder() {
-        public var getMeat: (suspend (ResourceRepository) -> Result<OpResult<Op.Meat.Get>>)? = null
+        public var getMeat: (suspend (WriteResourceRepository) -> Result<OpResult<Op.Meat.Get>>)? = null
         public var checkMeat: (suspend (OpResult<Op.Meat.Get>) -> Result<OpResult<Op.Meat.Check>>)? = null
         public var marinate: (suspend (OpResult<Op.Meat.Check>) -> Result<OpResult<Op.Meat.Marinate>>)? = null
         public var roastMeat: (suspend (OpResult<Op.Meat.Marinate>, OpResult<Op.Grill.Check>) -> Result<OpResult<Op.Roast>>)? = null
-        public var getGrill: (suspend (ResourceRepository) -> Result<OpResult<Op.Grill.Get>>)? = null
+        public var getGrill: (suspend (WriteResourceRepository) -> Result<OpResult<Op.Grill.Get>>)? = null
         public var checkGrill: (suspend (OpResult<Op.Grill.Get>) -> Result<OpResult<Op.Grill.Check>>)? = null
-        public var getSauceIngredients: (suspend (ResourceRepository) -> Result<OpResult<Op.Sauce.Get>>)? = null
+        public var getSauceIngredients: (suspend (WriteResourceRepository) -> Result<OpResult<Op.Sauce.Get>>)? = null
         public var prepareSauce: (suspend (OpResult<Op.Sauce.Get>) -> Result<OpResult<Op.Sauce.Prepare>>)? = null
-        public var getRosemary: (suspend (ResourceRepository) -> Result<OpResult<Op.Rosemary.Get>>)? = null
+        public var getRosemary: (suspend (WriteResourceRepository) -> Result<OpResult<Op.Rosemary.Get>>)? = null
         public var roastRosemary: ((OpResult<Op.Rosemary.Get>) -> Result<OpResult<Op.Rosemary.Roast>>)? = null
         public var finish: (suspend (OpResult<Op.Roast>, OpResult<Op.Sauce.Prepare>?, OpResult<Op.Rosemary.Roast>?) -> Result<Steak>)? = null
         public var listener: ((Event.OpCompleted<out Op>) -> Unit)? = null
@@ -81,7 +81,7 @@ public data class CookingProcessImpl private constructor(
         private val listener: ((Event.OpCompleted<Op.Meat.Get>) -> Unit)?
     ) : Op.Meat.Get by getMeat {
 
-        override suspend fun invoke(storage: ResourceRepository): Result<OpResult<Op.Meat.Get>> =
+        override suspend fun invoke(storage: WriteResourceRepository): Result<OpResult<Op.Meat.Get>> =
             getMeat(storage).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
@@ -119,7 +119,7 @@ public data class CookingProcessImpl private constructor(
         private val listener: ((Event.OpCompleted<Op.Grill.Get>) -> Unit)?
     ) : Op.Grill.Get by getGrill {
 
-        override suspend fun invoke(storage: ResourceRepository): Result<OpResult<Op.Grill.Get>> =
+        override suspend fun invoke(storage: WriteResourceRepository): Result<OpResult<Op.Grill.Get>> =
             getGrill(storage).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
@@ -136,7 +136,7 @@ public data class CookingProcessImpl private constructor(
         private val listener: ((Event.OpCompleted<Op.Sauce.Get>) -> Unit)?
     ) : Op.Sauce.Get by getSauce {
 
-        override suspend fun invoke(storage: ResourceRepository): Result<OpResult<Op.Sauce.Get>> =
+        override suspend fun invoke(storage: WriteResourceRepository): Result<OpResult<Op.Sauce.Get>> =
             getSauce(storage).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 
@@ -153,7 +153,7 @@ public data class CookingProcessImpl private constructor(
         private val listener: ((Event.OpCompleted<Op.Rosemary.Get>) -> Unit)?
     ) : Op.Rosemary.Get by getRosemary {
 
-        override suspend fun invoke(storage: ResourceRepository): Result<OpResult<Op.Rosemary.Get>> =
+        override suspend fun invoke(storage: WriteResourceRepository): Result<OpResult<Op.Rosemary.Get>> =
             getRosemary(storage).also { result -> listener?.let { it(opCompleted(result)) } }
     }
 

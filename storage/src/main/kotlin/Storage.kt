@@ -3,7 +3,7 @@ package ru.it_arch.tools.samples.ribeye.storage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import ru.it_arch.tools.samples.ribeye.ResourceRepository
+import ru.it_arch.tools.samples.ribeye.WriteResourceRepository
 import ru.it_arch.tools.samples.ribeye.data.Quantity
 import ru.it_arch.tools.samples.ribeye.data.Resource
 import ru.it_arch.tools.samples.ribeye.storage.impl.QuantityPieceImpl
@@ -17,10 +17,8 @@ import ru.it_arch.tools.samples.ribeye.storage.slot.Slot
 import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.reflect.KClass
-import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.DurationUnit
 
 /**
  *
@@ -30,7 +28,7 @@ import kotlin.time.DurationUnit
 public class Storage(
     private val slotFactory: SlotFactory,
     slots: Map<KClass<out Resource>, Slot>? = null
-) : ResourceRepository {
+) : WriteResourceRepository {
 
     private val mutex = Mutex()
     /** Ленивая инициализация слота при добавлении ресурса */

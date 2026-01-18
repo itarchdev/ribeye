@@ -1,13 +1,8 @@
 package ru.it_arch.tools.samples.ribeye.app
 
-import ru.it_arch.tools.samples.ribeye.ResourceRepository
-import ru.it_arch.tools.samples.ribeye.data.Resource
-import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
-import ru.it_arch.tools.samples.ribeye.dsl.impl.cookingProcess
-import ru.it_arch.tools.samples.ribeye.pull
-import ru.it_arch.tools.samples.ribeye.storage.impl.toWeight
-
 /* Это повар. ЧТО делать. Здесь задаются бизнес-правила.
+listener hear
+
 val interpreter = cookingProcess {
     getMeat = { storage ->
         val meat = storage.pull<Resource.Meat>(350L.toWeight())

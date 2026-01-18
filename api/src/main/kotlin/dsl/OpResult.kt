@@ -15,8 +15,8 @@ import kotlin.time.Duration
  * @param elapsed затраченное время
  * @param valueChain добавленная стоимость
  * */
-public data class OpResult<T : Op>(
-    public val opType: KClass<T>,
+public data class OpResult<out T : Op>(
+    public val opType: KClass<out T>,
     public val macronutrients: Macronutrients,
     public val quantity: Quantity,
     public val elapsed: Duration,

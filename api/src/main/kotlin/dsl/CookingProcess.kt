@@ -6,7 +6,7 @@ public interface CookingProcess : ValueObject.Data {
     public val `get meat from storage`: Op.Meat.Get
     public val `check meat freshness`: Op.Meat.Check
     public val `marinate meat`: Op.Meat.Marinate
-    public val `roast meat`: Op.Roast
+    public val `roast meat`: Op.Meat.Roast
     public val `get grill from storage`: Op.Grill.Get
     public val `check grill`: Op.Grill.Check
     public val `get sauce ingredients from storage`: Op.Sauce.Get

@@ -6,6 +6,11 @@ import kotlin.reflect.KClass
 
 public interface ResourceRepository {
     /**
+     *
+     * */
+    public suspend fun <T : Resource, Q : Quantity> sizeByType(type: KClass<out T>): Q
+
+    /**
      * Извлечение ресурса [Resource] в требуемом количестве
      *
      * @param T тип ресурса [Resource]
@@ -15,15 +20,4 @@ public interface ResourceRepository {
      * */
     public suspend fun <T : Resource, Q : Quantity> pullByType(type: KClass<out T>, requestQuantity: Q): Result<T>
 
-    /**
-     * Добавление ресурса [Resource]
-     *
-     * @param T тип ресурса [Resource]
-     * @param type [KClass] типа ресурса [Resource]
-     * @param resource добавляемый ресурс
-     * @return [Result] в случае успеха [Unit] или ошибка
-     * */
-    public suspend fun <T : Resource> putByType(type: KClass<out T>, resource: T): Result<Unit>
-
-    public suspend fun <T : Resource, Q : Quantity> sizeByType(type: KClass<out T>): Q
 }
