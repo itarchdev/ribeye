@@ -1,7 +1,6 @@
 package ru.it_arch.tools.samples.ribeye.dsl
 
 import ru.it_arch.tools.samples.ribeye.ResourceRepository
-import ru.it_arch.tools.samples.ribeye.dsl.Op.Meat.Marinate
 
 public sealed interface Op {
     /** 1. Операции с мясом */
