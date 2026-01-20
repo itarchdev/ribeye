@@ -15,7 +15,7 @@ import kotlin.time.Duration
  * @param elapsed затраченное время
  * @param valueChain добавленная стоимость
  * */
-public data class OpResult<out T : Op>(
+public data class State<out T : Op>(
     public val opType: KClass<out T>,
     public val macronutrients: Macronutrients,
     public val quantity: Quantity,
@@ -23,4 +23,4 @@ public data class OpResult<out T : Op>(
     public val valueChain: ValueChain
 )
 
-public typealias Steak = OpResult<Op.Finish>
+public typealias SteakReady = State<Op.Finish>

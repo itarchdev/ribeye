@@ -2,39 +2,20 @@ package ru.it_arch.tools.samples.ribeye.dsl
 
 import ru.it_arch.tools.samples.ribeye.ResourceRepository
 
+/**
+ * Операции. На вход подаются результаты предыдущих операций, либо ресурсы из внешнего источника.
+ * На выходе — результат этой операции. Операции должны быть
+ * */
 public sealed interface Op {
-    /** 1. Операции с мясом */
-    public sealed interface Meat : Op {
-        public fun interface Get : Meat {
-            public suspend operator fun invoke(storage: ResourceRepository): Result<OpResult<Get>>
-        }
-
-        public fun interface Check : Meat {
-            public suspend operator fun invoke(meat: OpResult<Get>): Result<OpResult<Check>>
-        }
-
-        /** Маринование и мяса. */
-        public fun interface Marinate : Meat {
-            public suspend operator fun invoke(meat: OpResult<Check>): Result<OpResult<Marinate>>
-        }
-
-        /** 3.1. */
-        public fun interface Roast : Meat {
-            public suspend operator fun invoke(
-                meat: OpResult<Marinate>,
-                grill: OpResult<Grill.Check>
-            ): Result<OpResult<Roast>>
-        }
-    }
 
     /** Операции с грилем */
     public sealed interface Grill : Op {
-        /** Получение необходимого для гриля. */
+        /** Приемка необходимого для гриля. */
         public fun interface Get : Grill {
-            public suspend operator fun invoke(storage: ResourceRepository): Result<OpResult<Get>>
+            public suspend operator fun invoke(storage: ResourceRepository): Result<State<Get>>
         }
 
-        /** Розжиг гриля */
+        /** Розжиг гриля и приемка его готовности */
         public fun interface Check : Grill {
             /**
              * Операция розжига гриля и проверки готовности
@@ -42,7 +23,7 @@ public sealed interface Op {
              * @param grill полученные компоненты гриля
              * @return [Result] результат подготовки гриля
              * */
-            public suspend operator fun invoke(grill: OpResult<Get>): Result<OpResult<Check>>
+            public suspend operator fun invoke(grill: State<Get>): Result<State<Check>>
         }
     }
 
@@ -50,12 +31,12 @@ public sealed interface Op {
     public sealed interface Sauce : Op {
         /** 3.2.1. */
         public fun interface Get : Sauce {
-            public suspend operator fun invoke(storage: ResourceRepository): Result<OpResult<Get>>
+            public suspend operator fun invoke(storage: ResourceRepository): Result<State<Get>>
         }
 
         /** 3.2.2. */
         public fun interface Prepare : Sauce {
-            public suspend operator fun invoke(sauce: OpResult<Get>): Result<OpResult<Prepare>>
+            public suspend operator fun invoke(sauce: State<Get>): Result<State<Prepare>>
         }
     }
 
@@ -63,21 +44,51 @@ public sealed interface Op {
     public sealed interface Rosemary : Op {
         /** 3.3.1 */
         public fun interface Get : Rosemary {
-            public suspend operator fun invoke(storage: ResourceRepository): Result<OpResult<Get>>
+            public suspend operator fun invoke(storage: ResourceRepository): Result<State<Get>>
         }
 
         /** 3.3.2 */
         public fun interface Roast : Rosemary {
-            public suspend operator fun invoke(rosemary: OpResult<Get>): Result<OpResult<Roast>>
+            public suspend operator fun invoke(rosemary: State<Get>): Result<State<Roast>>
         }
     }
 
-    /** 4. */
+    /** 1. Операции с мясом */
+    public sealed interface Meat : Op {
+        public fun interface Get : Meat {
+            public suspend operator fun invoke(storage: ResourceRepository): Result<State<Get>>
+        }
+
+        public fun interface Check : Meat {
+            public suspend operator fun invoke(meat: State<Get>): Result<State<Check>>
+        }
+
+        /** Маринование и мяса. */
+        public fun interface Marinate : Meat {
+            public suspend operator fun invoke(meat: State<Check>): Result<State<Marinate>>
+        }
+
+        public fun interface PrepareForRoasting : Meat {
+            public suspend operator fun invoke(
+                meat: State<Marinate>,
+                grill: State<Grill.Check>
+            ): Result<State<PrepareForRoasting>>
+        }
+
+        public fun interface Roast : Meat {
+            public suspend operator fun invoke(steak: State<PrepareForRoasting>): Result<State<Roast>>
+        }
+
+        /** 4. */
+        public fun interface Serve : Meat {
+            public suspend operator fun invoke(
+                steak: Result<State<Roast>>,
+                sauce: Result<State<Sauce.Prepare>>,
+                rosemary: Result<State<Rosemary.Roast>>
+            ): Result<State<Serve>>
+        }
+    }
     public fun interface Finish : Op {
-        public suspend operator fun invoke(
-            meat: OpResult<Meat.Roast>,
-            sauce: OpResult<Sauce.Prepare>?,
-            rosemary: OpResult<Rosemary.Roast>?
-        ): Result<Steak>
+        public suspend operator fun invoke(steak: State<Meat.Serve>): Result<SteakReady>
     }
 }

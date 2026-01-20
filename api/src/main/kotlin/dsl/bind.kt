@@ -1,33 +1,37 @@
 package ru.it_arch.tools.samples.ribeye.dsl
 
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * Функция-связка между последовательными операциями.
+ * Функция-связка между последовательными операциями. Трансформация [State] результата одной
+ * операции в результат выполнения другой.
  * */
-public inline infix fun <O : Op, P : Op> Result<OpResult<O>>.next(
-    op: (OpResult<O>) -> Result<OpResult<P>>
-): Result<OpResult<P>> =
+public inline infix fun <O : Op, P : Op> Result<State<O>>.next(
+    op: (State<O>) -> Result<State<P>>
+): Result<State<P>> =
     getOrNull()?.let { op(it) } ?: Result.failure(exceptionOrNull()!!)
 
+public inline infix fun Result<State<Op.Meat.Serve>>.finish(
+    op: (State<Op.Meat.Serve>) -> Result<SteakReady>
+): Result<SteakReady> =
+    getOrNull()?.let { op(it) } ?: Result.failure(exceptionOrNull()!!)
 
-// нужен список аргументов операций
-// На входе: список операций
-// Явный кастинг, т.к. возвращаемый тип функции должен быть списком с общей абстракцией, а каждая
-// операция возвращает конкретный тип подмножества Op.
 /**
  * Распараллеливание процесса на задачи
  * */
-public suspend inline fun <O : Op> split(
-    vararg opsBlock: suspend () -> Result<OpResult<O>>
-): List<Result<OpResult<O>>> = coroutineScope {
-    opsBlock.map { op ->
-        async { op() }
-    }.awaitAll()
+public suspend fun `prepare sauce and rosemary`(
+    meat: suspend () -> Result<State<Op.Meat.Roast>>,
+    sauce: suspend () -> Result<State<Op.Sauce.Prepare>>,
+    rosemary: suspend () -> Result<State<Op.Rosemary.Roast>>,
+    serve: Op.Meat.Serve
+): Result<State<Op.Meat.Serve>> = coroutineScope {
+    val steakDeferred = async { meat() }
+    val sauceDeferred = async { sauce() }
+    val rosemary = async { rosemary() }
+    serve(steakDeferred.await(), sauceDeferred.await(), rosemary.await())
 }
 
 /**
@@ -40,28 +44,38 @@ public suspend inline fun <O : Op> split(
  * @param opsBlock список функций для запуска подпроцессов
  * @return [Result] в случае успешн
  * */
-public suspend fun <O : Op> splitAndCancelFirst(
-    vararg opsBlock: suspend () -> Result<OpResult<O>>
-): Result<List<OpResult<O>>> = coroutineScope {
+public suspend fun `prepare meat and grll`(
+    meat: suspend () -> Result<State<Op.Meat.Marinate>>,
+    grill: suspend () -> Result<State<Op.Grill.Check>>,
+    combine: Op.Meat.PrepareForRoasting
+): Result<State<Op.Meat.PrepareForRoasting>> = coroutineScope {
     // Выступает посредником между ??
-    val channel = Channel<Result<OpResult<O>>>(opsBlock.size)
-    val jobs = opsBlock.map { task ->
-        launch { channel.send(task()) }
-    }
+    val channel = Channel<Result<State<Op>>>(2)
+    val meatJob = launch { channel.send(meat()) }
+    val grillJob = launch { channel.send(grill()) }
 
-    val results = mutableListOf<OpResult<O>>()
+    var meatResult: State<Op.Meat.Marinate>? = null
+    var grillResult: State<Op.Grill.Check>? = null
     var firstFailure: Throwable? = null
 
-    repeat(opsBlock.size) {
+    repeat(2) { i ->
         if (firstFailure != null) return@repeat
         channel.receive().fold(
-            onSuccess = results::add,
+            onSuccess = {
+                @Suppress("UNCHECKED_CAST")
+                when(i) {
+                    0 -> meatResult = it as State<Op.Meat.Marinate>
+                    1 -> grillResult = it as State<Op.Grill.Check>
+                }
+            },
             onFailure = { err ->
                 firstFailure = err // Захват любой первой ошибки
-                jobs.forEach { it.cancel() } // отмена выполнения всех задач по отдельности
+                // отмена выполнения всех задач по отдельности
+                meatJob.cancel()
+                grillJob.cancel()
             }
         )
     }
 
-    firstFailure?.let { Result.failure(it) } ?: Result.success(results.toList())
+    firstFailure?.let { Result.failure(it) } ?: combine(meatResult!!, grillResult!!)
 }
