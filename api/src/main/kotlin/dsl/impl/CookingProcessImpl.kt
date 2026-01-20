@@ -2,7 +2,6 @@ package ru.it_arch.tools.samples.ribeye.dsl.impl
 
 import ru.it_arch.k3dm.ValueObject
 import ru.it_arch.tools.samples.ribeye.ResourceRepository
-import ru.it_arch.tools.samples.ribeye.data.Resource
 import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
 import ru.it_arch.tools.samples.ribeye.dsl.Event
 import ru.it_arch.tools.samples.ribeye.dsl.Op
@@ -21,7 +20,7 @@ public data class CookingProcessImpl private constructor(
     override val `prepare sauce`: Op.Sauce.Prepare,
     override val `get rosemary from storage`: Op.Rosemary.Get,
     override val `roast rosemary`: Op.Rosemary.Roast,
-    override val `put meat on the grill`: Op.Meat.PrepareForRoasting,
+    override val `put meat on the grill and start roasting`: Op.Meat.PrepareForRoasting,
     override val `roast meat`: Op.Meat.Roast,
     override val `serve steak`: Op.Meat.Serve,
     override val `final check and create ribeye steak`: Op.Finish
@@ -77,7 +76,7 @@ public data class CookingProcessImpl private constructor(
                 `prepare sauce` = PrepareSauceWrapper(prepareSauce!!, listener),
                 `get rosemary from storage` = GetRosemaryWrapper(getRosemary!!, listener),
                 `roast rosemary` = RoastRosemaryWrapper(roastRosemary!!, listener),
-                `put meat on the grill` = SteakStartWrapper(steakStart!!, listener),
+                `put meat on the grill and start roasting` = SteakStartWrapper(steakStart!!, listener),
                 `roast meat` = SteakRoastWrapper(steakRoast!!, listener!!),
                 `serve steak` = ServeWrapper(serve!!, listener),
                 `final check and create ribeye steak` = FinishWrapper(finish!!, listener)
