@@ -105,14 +105,14 @@ public suspend fun `prepare meat and grill`(
     var grillResult: State<Op.Grill.Check>? = null
     var firstFailure: Throwable? = null
 
-    repeat(2) { i ->
+    repeat(2) {
         if (firstFailure != null) return@repeat
         channel.receive().fold(
-            onSuccess = {
+            onSuccess = { result ->
                 @Suppress("UNCHECKED_CAST")
-                when(i) {
-                    0 -> meatResult = it as State<Op.Meat.Marinate>
-                    1 -> grillResult = it as State<Op.Grill.Check>
+                when(result.opType) {
+                    Op.Meat.Marinate::class -> meatResult = result as State<Op.Meat.Marinate>
+                    Op.Grill.Check::class -> grillResult = result as State<Op.Grill.Check>
                 }
             },
             onFailure = { err ->
