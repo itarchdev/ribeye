@@ -1,13 +1,20 @@
 package ru.it_arch.tools.samples.ribeye
 
+import io.kotest.assertions.any
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.result.shouldBeSuccess
 import io.kotest.matchers.shouldBe
+import io.kotest.provided.neg
 import io.kotest.provided.pos
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.coVerifyOrder
+import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.runTest
+import org.junit.jupiter.api.Assertions.assertEquals
 import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
 import ru.it_arch.tools.samples.ribeye.dsl.Op
 import ru.it_arch.tools.samples.ribeye.dsl.State
@@ -88,29 +95,61 @@ class CookingProcessScriptTest: FunSpec({
 
     context("checking sequence of operations") {
         cookingProcess.run(mockk<ResourceRepository>())
-        pos("prepare meat") {
+        pos("prepare meat must be sequential") {
             coVerifyOrder {
                 opMeatGet(any())
                 opMeatCheck(any())
                 opMeatMarinate(any())
             }
         }
-        pos("prepare grill") {
+        pos("prepare grill must be sequential") {
             coVerifyOrder {
                 opGrillGet(any())
                 opGrillCheck(any())
             }
         }
-        pos("prepare sauce") {
+        pos("prepare sauce must be sequential") {
             coVerifyOrder {
                 opSauceGet(any())
                 opSaucePrepare(any())
             }
         }
-        pos("prepare rosemary") {
+        pos("prepare rosemary must be sequential") {
             coVerifyOrder {
                 opRosemaryGet(any())
                 opRosemaryRoast(any())
+            }
+        }
+    }
+
+    context("checking parallelism") {
+        pos("must execute meat and grill in parallel and return combined result") {
+            runTest {
+                val meatMock = mockk<suspend () -> Result<State<Op.Meat.Marinate>>>()
+                val grillMock = mockk<suspend () -> Result<State<Op.Grill.Check>>>()
+                val combineMock = mockk<Op.Meat.PrepareForRoasting>()
+
+                val meatState = mockk<State<Op.Meat.Marinate>>()
+                every { meatState.opType } returns Op.Meat.Marinate::class
+                val grillState = mockk<State<Op.Grill.Check>>()
+                every { grillState.opType } returns Op.Grill.Check::class
+                val finalState = Result.success(mockk<State<Op.Meat.PrepareForRoasting>>())
+
+                coEvery { meatMock() } coAnswers {
+                    delay(100) // Simulate work
+                    Result.success(meatState)
+                }
+                coEvery { grillMock() } coAnswers {
+                    delay(50) // Simulate work
+                    Result.success(grillState)
+                }
+                coEvery { combineMock(any(), any()) } returns finalState
+
+                // Act
+                `prepare meat and grill`(meatMock, grillMock, combineMock) shouldBe finalState
+                coVerify(exactly = 1) { meatMock() }
+                coVerify(exactly = 1) { grillMock() }
+                coVerify(exactly = 1) { combineMock(meatState, grillState) }
             }
         }
     }
