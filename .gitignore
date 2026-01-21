@@ -6,3 +6,4 @@
 build/
 tmp/
 local.properties
+.aider*

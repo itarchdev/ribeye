@@ -13,6 +13,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
 import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
 import ru.it_arch.tools.samples.ribeye.dsl.Op
@@ -207,6 +208,86 @@ class CookingProcessScriptTest: FunSpec({
 
                 advanceUntilIdle() // сдвиг времени, чтобы поймать исключение
                 meatWasCancelled shouldBe true
+            }
+        }
+    }
+
+    context("checking `prepare sauce and rosemary`") {
+        val meatState = mockk<State<Op.Meat.Roast>>()
+        every { meatState.opType } returns Op.Meat.Roast::class
+        val sauceState = mockk<State<Op.Sauce.Prepare>>()
+        every { sauceState.opType } returns Op.Sauce.Prepare::class
+        val rosemaryState = mockk<State<Op.Rosemary.Roast>>()
+        every { rosemaryState.opType } returns Op.Rosemary.Roast::class
+
+        pos("must execute meat, sauce and rosemary and return serve result") {
+            runTest {
+                val meatMock = mockk<suspend () -> Result<State<Op.Meat.Roast>>>()
+                val sauceMock = mockk<suspend () -> Result<State<Op.Sauce.Prepare>>>()
+                val rosemaryMock = mockk<suspend () -> Result<State<Op.Rosemary.Roast>>>()
+                val serveMock = mockk<Op.Meat.Serve>()
+
+                val finalState = Result.success(mockk<State<Op.Meat.Serve>>())
+                coEvery { meatMock() } coAnswers {
+                    delay(100.milliseconds)
+                    Result.success(meatState)
+                }
+                coEvery { sauceMock() } coAnswers {
+                    delay(100.milliseconds)
+                    Result.success(sauceState)
+                }
+                coEvery { rosemaryMock() } coAnswers {
+                    delay(100.milliseconds)
+                    Result.success(rosemaryState)
+                }
+                coEvery { serveMock(any(), any(), any()) } returns finalState
+
+                `prepare sauce and rosemary`(
+                    meatMock,
+                    sauceMock,
+                    rosemaryMock,
+                    serveMock
+                ) shouldBe finalState
+                currentTime shouldBe 100
+            }
+        }
+
+        neg("failure of meat must cancel sauce and rosemary") {
+            runTest {
+                var sauceCancelled = false
+                var rosemaryCancelled = false
+                val sauceMock = mockk<suspend () -> Result<State<Op.Sauce.Prepare>>>()
+                val rosemaryMock = mockk<suspend () -> Result<State<Op.Rosemary.Roast>>>()
+
+                // MockK issue:
+                val meatMock: suspend () -> Result<State<Op.Meat.Roast>> = {
+                    Result.failure(RuntimeException("Meat failed"))
+                }
+
+                coEvery { sauceMock() } coAnswers {
+                    try {
+                        delay(1.seconds)
+                        Result.success(sauceState)
+                    } catch (e: CancellationException) {
+                        sauceCancelled = true
+                        throw e // Re-throw to complete cancellation process internally
+                    }
+                }
+                coEvery { rosemaryMock() } coAnswers {
+                    try {
+                        delay(2.seconds)
+                        Result.success(rosemaryState)
+                    } catch (e: CancellationException) {
+                        rosemaryCancelled = true
+                        throw e // Re-throw to complete cancellation process internally
+                    }
+                }
+
+                `prepare sauce and rosemary`(meatMock, sauceMock, rosemaryMock,mockk(relaxed = true))
+
+                sauceCancelled shouldBe true
+                rosemaryCancelled shouldBe true
+                currentTime shouldBe 0
             }
         }
     }

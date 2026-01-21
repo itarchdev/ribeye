@@ -1,6 +1,5 @@
 package ru.it_arch.tools.samples.ribeye
 
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -87,8 +86,6 @@ public inline infix fun Result<State<Op.Meat.Serve>>.finish(
  * При возврате ошибки одной из задач, выполнение всех задач прекращается и возвращается эта ошибка.
  * При успешном выполнении всех задач, возвращается список их результатов.
  *
- * @param O op
- * @param opsBlock список функций для запуска подпроцессов
  * @return [Result] в случае успешн
  * */
 public suspend fun `prepare meat and grill`(
@@ -128,7 +125,9 @@ public suspend fun `prepare meat and grill`(
 }
 
 /**
- * Распараллеливание процесса на задачи
+ * Параллельное выполнение жарки мяса, подготовки соуса и розмарина.
+ * Жарка мяса — критическая операция, при ошибке которой остальные операции отменяються.
+ * Подготовка соуса и розмарина — операции некритические. При их сбое общий процесс не отменяется.
  * */
 public suspend fun `prepare sauce and rosemary`(
     meat: suspend () -> Result<State<Op.Meat.Roast>>,
@@ -136,8 +135,37 @@ public suspend fun `prepare sauce and rosemary`(
     rosemary: suspend () -> Result<State<Op.Rosemary.Roast>>,
     serve: Op.Meat.Serve
 ): Result<State<Op.Meat.Serve>> = coroutineScope {
-    val steakDeferred = async { meat() }
-    val sauceDeferred = async { sauce() }
-    val rosemary = async { rosemary() }
-    serve(steakDeferred.await(), sauceDeferred.await(), rosemary.await())
+    val channel = Channel<ResultWrapper>(3)
+    launch { channel.send(ResultWrapper.Meat(meat())) }
+    val sauceJob = launch { channel.send(ResultWrapper.Sauce(sauce())) }
+    val rosemaryJob = launch { channel.send(ResultWrapper.Rosemary(rosemary())) }
+
+    var meatResult: Result<State<Op.Meat.Roast>>? = null
+    var sauceResult: Result<State<Op.Sauce.Prepare>>? = null
+    var rosemaryResult: Result<State<Op.Rosemary.Roast>>? = null
+
+    repeat(3) {
+        when (val received = channel.receive()) {
+            is ResultWrapper.Meat -> {
+                meatResult = received.result
+                if (meatResult.isFailure) {
+                    sauceJob.cancel()
+                    rosemaryJob.cancel()
+                    return@coroutineScope Result.failure(meatResult.exceptionOrNull()!!)
+                }
+            }
+            is ResultWrapper.Sauce -> sauceResult = received.result
+            is ResultWrapper.Rosemary -> rosemaryResult = received.result
+        }
+    }
+    serve(meatResult!!, sauceResult!!, rosemaryResult!!)
+}
+
+/**
+ * Вспомогательная обертка для [Result] для обхода стирания типов.
+ * */
+private sealed interface ResultWrapper {
+    data class Meat(val result: Result<State<Op.Meat.Roast>>) : ResultWrapper
+    data class Sauce(val result: Result<State<Op.Sauce.Prepare>>) : ResultWrapper
+    data class Rosemary(val result: Result<State<Op.Rosemary.Roast>>) : ResultWrapper
 }
