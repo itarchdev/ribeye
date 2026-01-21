@@ -10,16 +10,20 @@ import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
 import ru.it_arch.tools.samples.ribeye.dsl.Op
 import ru.it_arch.tools.samples.ribeye.dsl.State
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CookingProcessScriptTest: FunSpec({
 
     fun <T : Op> defaultState(type: KClass<out T>): State<T> =
@@ -121,19 +125,19 @@ class CookingProcessScriptTest: FunSpec({
         }
     }
 
-    context("checking parallelism") {
+    context("checking `prepare meat and grill`") {
+        val meatState = mockk<State<Op.Meat.Marinate>>()
+        val grillState = mockk<State<Op.Grill.Check>>()
+        every { meatState.opType } returns Op.Meat.Marinate::class
+        every { grillState.opType } returns Op.Grill.Check::class
+
         pos("must execute meat and grill in parallel and return combined result") {
             runTest {
                 val meatMock = mockk<suspend () -> Result<State<Op.Meat.Marinate>>>()
                 val grillMock = mockk<suspend () -> Result<State<Op.Grill.Check>>>()
                 val combineMock = mockk<Op.Meat.PrepareForRoasting>()
 
-                val meatState = mockk<State<Op.Meat.Marinate>>()
-                val grillState = mockk<State<Op.Grill.Check>>()
                 val finalState = Result.success(mockk<State<Op.Meat.PrepareForRoasting>>())
-
-                every { meatState.opType } returns Op.Meat.Marinate::class
-                every { grillState.opType } returns Op.Grill.Check::class
 
                 coEvery { meatMock() } coAnswers {
                     delay(100.milliseconds)
@@ -159,16 +163,12 @@ class CookingProcessScriptTest: FunSpec({
                 val combineMock = mockk<Op.Meat.PrepareForRoasting>()
                 val err = RuntimeException("Grill error")
 
-                val grillState = mockk<State<Op.Grill.Check>>()
-                every { grillState.opType } returns Op.Grill.Check::class
                 // Grill завершится раньше meat с ошибкой
                 coEvery { grillMock() } coAnswers {
                     delay(100.milliseconds)
                     Result.failure(err)
                 }
 
-                val meatState = mockk<State<Op.Meat.Marinate>>()
-                every { meatState.opType } returns Op.Meat.Marinate::class
                 // Meat выполняется дольше grill
                 coEvery { meatMock() } coAnswers {
                     delay(200.milliseconds)
@@ -177,6 +177,36 @@ class CookingProcessScriptTest: FunSpec({
 
                 `prepare meat and grill`(meatMock, grillMock, combineMock) shouldBeFailure err
                 coVerify(exactly = 0) { combineMock(any(), any()) }
+            }
+        }
+
+        /* 1. Запускается процесс подготовки мяса длительностью 2 с.
+           2. Запускается процесс подготовки гриля, который завершается с ошибкой через 100 мс и
+              должен убить 1-ый процесс.
+           3. Проверка, что 1-ый процесс завершился принудительно. */
+        neg("must cancel pending jobs when one fails") {
+            runTest {
+                var meatWasCancelled = false
+                val meatMock: suspend () -> Result<State<Op.Meat.Marinate>> = {
+                    try {
+                        delay(2.seconds)
+                        Result.success(meatState)
+                    } catch (e: CancellationException) {
+                        meatWasCancelled = true
+                        throw e
+                    }
+                }
+
+                val grillMock = mockk<suspend () -> Result<State<Op.Grill.Check>>>()
+                coEvery { grillMock() } coAnswers {
+                    delay(100.milliseconds)
+                    Result.failure(RuntimeException("Fail"))
+                }
+
+                `prepare meat and grill`(meatMock, grillMock, mockk(relaxed = true))
+
+                advanceUntilIdle() // сдвиг времени, чтобы поймать исключение
+                meatWasCancelled shouldBe true
             }
         }
     }
