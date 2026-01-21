@@ -1,8 +1,7 @@
 package ru.it_arch.tools.samples.ribeye
 
-import io.kotest.assertions.any
 import io.kotest.core.spec.style.FunSpec
-import io.kotest.matchers.result.shouldBeSuccess
+import io.kotest.matchers.result.shouldBeFailure
 import io.kotest.matchers.shouldBe
 import io.kotest.provided.neg
 import io.kotest.provided.pos
@@ -11,15 +10,15 @@ import io.mockk.coVerify
 import io.mockk.coVerifyOrder
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.verify
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions.assertEquals
 import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
 import ru.it_arch.tools.samples.ribeye.dsl.Op
 import ru.it_arch.tools.samples.ribeye.dsl.State
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 class CookingProcessScriptTest: FunSpec({
 
@@ -130,26 +129,54 @@ class CookingProcessScriptTest: FunSpec({
                 val combineMock = mockk<Op.Meat.PrepareForRoasting>()
 
                 val meatState = mockk<State<Op.Meat.Marinate>>()
-                every { meatState.opType } returns Op.Meat.Marinate::class
                 val grillState = mockk<State<Op.Grill.Check>>()
-                every { grillState.opType } returns Op.Grill.Check::class
                 val finalState = Result.success(mockk<State<Op.Meat.PrepareForRoasting>>())
 
+                every { meatState.opType } returns Op.Meat.Marinate::class
+                every { grillState.opType } returns Op.Grill.Check::class
+
                 coEvery { meatMock() } coAnswers {
-                    delay(100) // Simulate work
+                    delay(100.milliseconds)
                     Result.success(meatState)
                 }
                 coEvery { grillMock() } coAnswers {
-                    delay(50) // Simulate work
+                    delay(50.milliseconds)
                     Result.success(grillState)
                 }
                 coEvery { combineMock(any(), any()) } returns finalState
 
-                // Act
                 `prepare meat and grill`(meatMock, grillMock, combineMock) shouldBe finalState
                 coVerify(exactly = 1) { meatMock() }
                 coVerify(exactly = 1) { grillMock() }
                 coVerify(exactly = 1) { combineMock(meatState, grillState) }
+            }
+        }
+
+        neg("must return first failure and short-circuit further processing") {
+            runTest {
+                val meatMock = mockk<suspend () -> Result<State<Op.Meat.Marinate>>>()
+                val grillMock = mockk<suspend () -> Result<State<Op.Grill.Check>>>()
+                val combineMock = mockk<Op.Meat.PrepareForRoasting>()
+                val err = RuntimeException("Grill error")
+
+                val grillState = mockk<State<Op.Grill.Check>>()
+                every { grillState.opType } returns Op.Grill.Check::class
+                // Grill завершится раньше meat с ошибкой
+                coEvery { grillMock() } coAnswers {
+                    delay(100.milliseconds)
+                    Result.failure(err)
+                }
+
+                val meatState = mockk<State<Op.Meat.Marinate>>()
+                every { meatState.opType } returns Op.Meat.Marinate::class
+                // Meat выполняется дольше grill
+                coEvery { meatMock() } coAnswers {
+                    delay(200.milliseconds)
+                    Result.success(meatState)
+                }
+
+                `prepare meat and grill`(meatMock, grillMock, combineMock) shouldBeFailure err
+                coVerify(exactly = 0) { combineMock(any(), any()) }
             }
         }
     }
