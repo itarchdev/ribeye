@@ -30,7 +30,7 @@ public sealed interface Quantity {
         }
 
         override fun compareTo(other: Weight): Int =
-            (boxed - other.boxed).let { if (it == 0L) 0 else if (it < 0) -1 else 1 }
+            boxed.compareTo(other.boxed)
 
         public operator fun minus(other: Weight): Weight =
             apply(boxed - other.boxed)
