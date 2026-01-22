@@ -46,6 +46,7 @@ dependencies {
     api(libs.kotlinx.serialization.json)
     implementation(project(":slot"))
 
+    testImplementation(project(":commons"))
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotest)
     testImplementation(libs.kotest.assertions)

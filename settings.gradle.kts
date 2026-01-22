@@ -22,6 +22,7 @@ plugins {
 }
 
 include(
+    "commons",
     "slot",
     "storage",
     "api",

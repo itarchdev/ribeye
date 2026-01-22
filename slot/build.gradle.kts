@@ -12,6 +12,7 @@ dependencies {
     api(libs.kotlinx.coroutines.core)
 
     testImplementation(project(":api"))
+    testImplementation(project(":commons"))
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotest)

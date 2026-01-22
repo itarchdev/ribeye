@@ -22,6 +22,7 @@ dependencies {
     api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.datetime)
 
+    testImplementation(project(":commons"))
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.kotest)
@@ -67,7 +68,7 @@ kover {
                 rule {
                     disabled = false
                     bound {
-                        minValue = 0
+                        minValue = 1
                     }
                 }
             }
