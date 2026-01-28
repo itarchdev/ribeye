@@ -1,15 +1,19 @@
 package ru.it_arch.tools.samples.ribeye.app
 
-import ru.it_arch.tools.samples.ribeye.data.Resource
+import kotlinx.coroutines.delay
+import ru.it_arch.tools.samples.ribeye.bl.stateForGetMeat
+import ru.it_arch.tools.samples.ribeye.bl.stateForCheckMeat
+import ru.it_arch.tools.samples.ribeye.bl.stateForMarinate
+import ru.it_arch.tools.samples.ribeye.dsl.Resource
 import ru.it_arch.tools.samples.ribeye.dsl.Op
 import ru.it_arch.tools.samples.ribeye.dsl.State
 import ru.it_arch.tools.samples.ribeye.dsl.impl.cookingProcess
+import ru.it_arch.tools.samples.ribeye.dsl.impl.weight
 import ru.it_arch.tools.samples.ribeye.dsl.impl.valueChain
 import ru.it_arch.tools.samples.ribeye.pull
-import ru.it_arch.tools.samples.ribeye.storage.impl.toPiece
-import ru.it_arch.tools.samples.ribeye.storage.impl.toWeight
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.measureTime
+import kotlin.time.measureTimedValue
 
 
 /**
@@ -18,39 +22,28 @@ import kotlin.time.Duration.Companion.minutes
  * */
 val interpreter = cookingProcess {
     getMeat = { storage ->
-        storage.pull<Resource.Meat>(350L.toWeight()).mapCatching { meat ->
-            meat.takeUnless { it.isRotten() }?.let {
-                State(
-                    opType = Op.Meat.Get::class,
-                    macronutrients = meat.macronutrients,
-                    quantity = meat.quantity,
-                    elapsed = 2.minutes,
-                    valueChain = 10.valueChain()
-                )
-            } ?: throw RuntimeException("Meat is rotten")
+        measureTimedValue { storage.pull<Resource.Meat>(350.weight) }.let { tv ->
+            tv.value.mapCatching { meat ->
+                meat.stateForGetMeat(tv.duration)
+            }
         }
     }
     checkMeat = { meat ->
         // возможна дополнительная проверка с выкидыванием исключения
-        State(
-            opType = Op.Meat.Check::class,
-            macronutrients = meat.macronutrients,
-            quantity = meat.quantity,
-            elapsed = meat.elapsed + 1.minutes,
-            valueChain = meat.valueChain + 20.valueChain()
-        ).let{ Result.success(it) }
+        measureTime { delay(1.minutes) }.let { elapsed ->
+            runCatching { meat.stateForCheckMeat(elapsed) }
+        }
     }
     marinate = { meat ->
-        State(
-            opType = Op.Meat.Marinate::class,
-            macronutrients = meat.macronutrients,
-            quantity = meat.quantity,
-            elapsed = meat.elapsed + 15.minutes,
-            valueChain = meat.valueChain + 30.valueChain()
-        ).let{ Result.success(it) }
+        measureTime { delay(20.minutes) }.let { elapsed ->
+            runCatching { meat.stateForMarinate(elapsed) }
+        }
     }
+
+
+
     getGrill = { storage ->
-        storage.pull<Resource.Grill>(800L.toWeight()).mapCatching { grill ->
+        storage.pull<Resource.Grill>(800L.weight()).mapCatching { grill ->
             State(
                 opType = Op.Grill.Get::class,
                 macronutrients = grill.macronutrients,
@@ -65,13 +58,13 @@ val interpreter = cookingProcess {
         State(
             opType = Op.Grill.Check::class,
             macronutrients = grill.macronutrients,
-            quantity = 0L.toWeight(), // все истрачено
+            quantity = 0L.weight(), // все истрачено
             elapsed = 12.minutes,
             valueChain = 40.valueChain()
         ).let{ Result.success(it) }
     }
     getSauceIngredients = { storage ->
-        storage.pull<Resource.SauceIngredients>(150L.toWeight()).mapCatching { sauce ->
+        storage.pull<Resource.SauceIngredients>(150L.weight()).mapCatching { sauce ->
             State(
                 opType = Op.Sauce.Get::class,
                 macronutrients = sauce.macronutrients,

@@ -1,4 +1,4 @@
-package ru.it_arch.tools.samples.ribeye.storage.impl
+package ru.it_arch.tools.samples.ribeye.dsl.impl
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
@@ -14,10 +14,10 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.encoding.decodeStructure
 import kotlinx.serialization.encoding.encodeStructure
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.data.Expiration
-import ru.it_arch.tools.samples.ribeye.data.Macronutrients
-import ru.it_arch.tools.samples.ribeye.data.Quantity
-import ru.it_arch.tools.samples.ribeye.data.Resource
+import ru.it_arch.tools.samples.ribeye.dsl.Expiration
+import ru.it_arch.tools.samples.ribeye.dsl.Macronutrients
+import ru.it_arch.tools.samples.ribeye.dsl.Quantity
+import ru.it_arch.tools.samples.ribeye.dsl.Resource
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -88,14 +88,14 @@ public data class MeatImpl private constructor(
                 encodeSerializableElement(
                     descriptor,
                     0,
-                    MacronutrientsImpl.serializer(),
+                    MacronutrientsImpl.Companion.serializer(),
                     value.macronutrients as MacronutrientsImpl
                 )
                 encodeLongElement(descriptor, 1, value.quantity.boxed)
                 encodeSerializableElement(
                     descriptor,
                     2,
-                    Instant.serializer(),
+                    Instant.Companion.serializer(),
                     value.expiration.boxed
                 )
             }
@@ -109,14 +109,14 @@ public data class MeatImpl private constructor(
                             0 -> macronutrients = decodeSerializableElement(
                                 descriptor,
                                 0,
-                                MacronutrientsImpl.serializer()
+                                MacronutrientsImpl.Companion.serializer()
                             )
                             1 -> quantity =
                                 QuantityWeightImpl(decodeLongElement(descriptor, 1))
                             2 -> expiration = decodeSerializableElement(
                                 descriptor,
                                 2,
-                                Instant.serializer()
+                                Instant.Companion.serializer()
                             ).let { ExpirationImpl(it) }
                             DECODE_DONE -> break@loop
                             else -> throw SerializationException("Unexpected index $i")

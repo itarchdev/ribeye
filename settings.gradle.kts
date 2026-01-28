@@ -26,5 +26,6 @@ include(
     "slot",
     "storage",
     "api",
+    "business-logic",
     "app"
 )

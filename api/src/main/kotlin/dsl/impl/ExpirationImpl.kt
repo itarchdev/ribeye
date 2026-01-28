@@ -1,8 +1,8 @@
-package ru.it_arch.tools.samples.ribeye.storage.impl
+package ru.it_arch.tools.samples.ribeye.dsl.impl
 
 import kotlinx.datetime.toInstant
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.data.Expiration
+import ru.it_arch.tools.samples.ribeye.dsl.Expiration
 import kotlin.time.Instant
 
 @JvmInline

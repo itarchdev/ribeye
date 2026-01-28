@@ -1,4 +1,4 @@
-package ru.it_arch.tools.samples.ribeye.data
+package ru.it_arch.tools.samples.ribeye.dsl
 
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone

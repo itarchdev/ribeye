@@ -1,7 +1,7 @@
-package ru.it_arch.tools.samples.ribeye.storage.impl
+package ru.it_arch.tools.samples.ribeye.dsl.impl
 
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.data.Quantity
+import ru.it_arch.tools.samples.ribeye.dsl.Quantity
 
 @JvmInline
 public value class QuantityWeightImpl private constructor(

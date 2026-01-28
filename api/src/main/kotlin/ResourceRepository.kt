@@ -1,7 +1,7 @@
 package ru.it_arch.tools.samples.ribeye
 
-import ru.it_arch.tools.samples.ribeye.data.Quantity
-import ru.it_arch.tools.samples.ribeye.data.Resource
+import ru.it_arch.tools.samples.ribeye.dsl.Quantity
+import ru.it_arch.tools.samples.ribeye.dsl.Resource
 import kotlin.reflect.KClass
 
 public interface ResourceRepository {

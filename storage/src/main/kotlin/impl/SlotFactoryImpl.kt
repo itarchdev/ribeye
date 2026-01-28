@@ -1,8 +1,9 @@
 package ru.it_arch.tools.samples.ribeye.storage.impl
 
-import ru.it_arch.tools.samples.ribeye.data.Expiration
-import ru.it_arch.tools.samples.ribeye.data.Macronutrients
-import ru.it_arch.tools.samples.ribeye.data.Quantity
+import ru.it_arch.tools.samples.ribeye.dsl.Expiration
+import ru.it_arch.tools.samples.ribeye.dsl.Macronutrients
+import ru.it_arch.tools.samples.ribeye.dsl.Quantity
+import ru.it_arch.tools.samples.ribeye.dsl.impl.format
 import ru.it_arch.tools.samples.ribeye.storage.SlotFactory
 import ru.it_arch.tools.samples.ribeye.storage.slot.Slot
 

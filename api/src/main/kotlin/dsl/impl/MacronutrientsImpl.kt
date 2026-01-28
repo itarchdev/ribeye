@@ -1,4 +1,4 @@
-package ru.it_arch.tools.samples.ribeye.storage.impl
+package ru.it_arch.tools.samples.ribeye.dsl.impl
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
@@ -13,7 +13,7 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.encoding.decodeStructure
 import kotlinx.serialization.encoding.encodeStructure
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.data.Macronutrients
+import ru.it_arch.tools.samples.ribeye.dsl.Macronutrients
 
 @ConsistentCopyVisibility
 @Serializable(with = MacronutrientsImpl.Companion::class)

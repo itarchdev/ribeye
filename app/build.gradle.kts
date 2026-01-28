@@ -26,5 +26,6 @@ application {
 }
 
 dependencies {
+    implementation(project(":business-logic"))
     implementation(project(":storage"))
 }

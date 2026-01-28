@@ -1,8 +1,6 @@
 package ru.it_arch.tools.samples.ribeye.storage
 
-import ru.it_arch.tools.samples.ribeye.data.Expiration
-import kotlin.time.Duration
-import kotlin.time.Instant
+import ru.it_arch.tools.samples.ribeye.dsl.Expiration
 
 public sealed class StorageError(msg: String) : RuntimeException(msg) {
     public class NotFound(

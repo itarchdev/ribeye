@@ -1,4 +1,4 @@
-package ru.it_arch.tools.samples.ribeye.data
+package ru.it_arch.tools.samples.ribeye.dsl
 
 import ru.it_arch.k3dm.ValueObject
 import kotlin.reflect.KClass
@@ -22,8 +22,8 @@ public sealed interface Resource : ValueObject.Data {
     public val maxStorage: Duration
 
     /** Проверка просроченности ресурса */
-    public fun isRotten(): Boolean =
-        expiration.boxed < Clock.System.now()
+    public val isRotten: Boolean
+        get() = expiration.boxed < Clock.System.now()
 
     /** Мясо для стейка */
     public interface Meat : Resource {

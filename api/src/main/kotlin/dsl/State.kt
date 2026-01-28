@@ -1,7 +1,6 @@
 package ru.it_arch.tools.samples.ribeye.dsl
 
-import ru.it_arch.tools.samples.ribeye.data.Macronutrients
-import ru.it_arch.tools.samples.ribeye.data.Quantity
+import ru.it_arch.k3dm.ValueObject
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 
@@ -13,14 +12,16 @@ import kotlin.time.Duration
  * @param macronutrients КБЖУ
  * @param quantity количество
  * @param elapsed затраченное время
- * @param valueChain добавленная стоимость
+ * @param value цепочка ценности
  * */
-public data class State<out T : Op>(
-    public val opType: KClass<out T>,
-    public val macronutrients: Macronutrients,
-    public val quantity: Quantity,
-    public val elapsed: Duration,
-    public val valueChain: ValueChain
-)
+public interface State<out T : Op> : ValueObject.Data {
+    public val opType: KClass<out T>
+    public val macronutrients: Macronutrients
+    public val quantity: Quantity
+    public val elapsed: Duration
+    public val value: ValueChain
+
+    override fun validate() {}
+}
 
 public typealias SteakReady = State<Op.Finish>

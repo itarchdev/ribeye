@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 plugins {
     `java-library`
     alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.test.logger)
     alias(libs.plugins.test.report)
     alias(libs.plugins.kover)
@@ -19,10 +18,7 @@ kotlin {
 }
 
 dependencies {
-    api(libs.k3dm)
-    api(libs.kotlinx.serialization.json)
-    api(libs.kotlinx.coroutines.core)
-    api(libs.kotlinx.datetime)
+    api(project(":api"))
 
     testImplementation(project(":commons"))
     testImplementation(libs.mockk)
@@ -59,7 +55,7 @@ kover {
     reports {
         filters {
             includes {
-                packages("ru.it_arch.tools.samples.ribeye")
+                packages("ru.it_arch.tools.samples.ribeye.bl")
             }
         }
         total {
@@ -70,7 +66,7 @@ kover {
                 rule {
                     disabled = false
                     bound {
-                        minValue = 0
+                        minValue = 1
                     }
                 }
             }

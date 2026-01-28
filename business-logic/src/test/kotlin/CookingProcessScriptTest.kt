@@ -1,4 +1,4 @@
-package ru.it_arch.tools.samples.ribeye
+package ru.it_arch.tools.samples.ribeye.bl
 
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.result.shouldBeFailure
@@ -15,9 +15,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
+import ru.it_arch.tools.samples.ribeye.ResourceRepository
 import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
 import ru.it_arch.tools.samples.ribeye.dsl.Op
 import ru.it_arch.tools.samples.ribeye.dsl.State
+import ru.it_arch.tools.samples.ribeye.dsl.impl.StateImpl
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.days
@@ -25,16 +27,16 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class CookingProcessScriptTest: FunSpec({
+class CookingProcessScriptTest : FunSpec({
 
     fun <T : Op> defaultState(type: KClass<out T>): State<T> =
-        State(
-            opType = type,
-            macronutrients = mockk(),
-            quantity = mockk(),
-            elapsed = 1.days,
-            valueChain = mockk()
-        )
+        StateImpl.Builder<T>().apply {
+            opType = type
+            macronutrients = mockk()
+            quantity = mockk()
+            elapsed = 1.days
+            value = mockk()
+        }.build()
 
     val opGrillGet = mockk<Op.Grill.Get>()
     coEvery { opGrillGet.invoke(any()) } returns
