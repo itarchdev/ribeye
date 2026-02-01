@@ -10,6 +10,7 @@ import ru.it_arch.tools.samples.ribeye.dsl.impl.checkMeatState
 import ru.it_arch.tools.samples.ribeye.dsl.impl.fats
 import ru.it_arch.tools.samples.ribeye.dsl.impl.getGrillState
 import ru.it_arch.tools.samples.ribeye.dsl.impl.getMeatState
+import ru.it_arch.tools.samples.ribeye.dsl.impl.getSauceIngredientsState
 import ru.it_arch.tools.samples.ribeye.dsl.impl.marinateState
 import ru.it_arch.tools.samples.ribeye.dsl.impl.weight
 import ru.it_arch.tools.samples.ribeye.dsl.impl.valueChain
@@ -72,14 +73,14 @@ public fun Resource.Meat.stateForGetMeat(elapsed: Duration): State<Op.Meat.Get> 
 public fun State<Op.Meat.Get>.stateForCheckMeat(elapsed: Duration): State<Op.Meat.Check> {
     // Полагаем стейк рибай жирностью 18-25%
     require(macronutrients.fats in 18.0.fats..25.0.fats) { "Meat check: fats must be in range [18..25g]" }
-    require(elapsed <= 5.minutes) { "Meat check: duration must be <= 5 min" }
+    require(elapsed in 1.minutes..5.minutes) { "Meat check: duration must be in range [1..5 min]" }
 
     return checkMeatState {
         this.opType = Op.Meat.Check::class
         this.macronutrients = this@stateForCheckMeat.macronutrients
         this.quantity = this@stateForCheckMeat.quantity
-        this.elapsed = this@stateForCheckMeat.elapsed + elapsed
-        this.value = this@stateForCheckMeat.value + elapsed.simpleValueChain(0.2, 25.valueChain)
+        this.elapsed = elapsed
+        this.value = elapsed.simpleValueChain(0.2, 25.valueChain)
     }
 }
 
@@ -99,8 +100,8 @@ public fun State<Op.Meat.Check>.stateForMarinate(elapsed: Duration): State<Op.Me
         this.macronutrients = this@stateForMarinate.macronutrients
         // полагается, что в процессе маринования вес увеличивается на 7%
         this.quantity = this@stateForMarinate.quantity.addPercent(0.07)
-        this.elapsed = this@stateForMarinate.elapsed + elapsed
-        this.value = this@stateForMarinate.value + elapsed.simpleValueChain(0.75, 20.valueChain)
+        this.elapsed = elapsed
+        this.value = elapsed.simpleValueChain(0.75, 20.valueChain)
     }
 }
 
@@ -138,6 +139,32 @@ public fun State<Op.Grill.Get>.stateForCheckGrill(elapsed: Duration): State<Op.G
         this.opType = Op.Grill.Check::class
         this.macronutrients = this@stateForCheckGrill.macronutrients
         this.quantity = this@stateForCheckGrill.quantity
-        this.elapsed = this@stateForCheckGrill.elapsed + elapsed
+        this.elapsed = elapsed
+        this.value = elapsed.simpleValueChain(0.23, 30.valueChain)
     }
+}
+
+/**
+ * Бизнес-правила приемки компонентов для соуса и изменение состояния.
+ *
+ * @receiver исходный ресурс
+ * @param elapsed затраченное операцией время
+ * @return состояние [State] принятых компонентов
+ * */
+public fun Resource.SauceIngredients.stateForGetSauceIngredients(elapsed: Duration): State<Op.Sauce.Get> {
+    require(quantity in 150.weight..200.weight) { "Sauce ingredients acceptance: weight must be in range [150..200g]" }
+    require(elapsed in 1.minutes..3.minutes) { "Sauce ingredients acceptance: duration must be in range [1..3 min]" }
+
+    return getSauceIngredientsState {
+        this.opType = Op.Sauce.Get::class
+        this.macronutrients = this@stateForGetSauceIngredients.macronutrients
+        this.quantity = this@stateForGetSauceIngredients.quantity
+        this.elapsed = elapsed
+        this.value = elapsed.simpleValueChain(0.13, 15.valueChain)
+    }
+}
+
+public fun State<Op.Sauce.Get>.stateForPrepareSauce(elapsed: Duration): State<Op.Sauce.Prepare> {
+    // полагается, что в процессе приготовления соуса калорийность повышается на 15%
+    require() {}
 }

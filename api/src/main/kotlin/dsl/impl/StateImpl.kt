@@ -25,7 +25,11 @@ public data class StateImpl<out T : Op> private constructor(
     @Suppress("UNCHECKED_CAST")
     override fun <R : ValueObject.Data> fork(vararg args: Any?): R =
         Builder<T>().apply {
-
+            opType = args[0] as KClass<out T>
+            macronutrients = args[1] as Macronutrients
+            quantity = args[2] as Quantity
+            elapsed = args[3] as Duration
+            value = args[4] as ValueChain
         }.build() as R
 
     public class Builder<T : Op> {

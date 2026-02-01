@@ -11,7 +11,6 @@ import ru.it_arch.tools.samples.ribeye.dsl.State
 import ru.it_arch.tools.samples.ribeye.dsl.ValueChain
 import java.math.BigDecimal
 import java.math.RoundingMode
-import kotlin.time.Duration
 import kotlin.time.Instant
 
 internal val json = Json {
@@ -183,6 +182,15 @@ public fun String.toRosemary(): Resource.Rosemary =
     json.decodeFromString<RosemaryImpl>(this)
 
 // State
+
+public fun <T : Op> State<T>.toBuilder(): StateImpl.Builder<T> =
+    StateImpl.Builder<T>().apply {
+        this.opType = this@toBuilder.opType
+        this.macronutrients = this@toBuilder.macronutrients
+        this.quantity = this@toBuilder.quantity
+        this.elapsed = this@toBuilder.elapsed
+        this.value = this@toBuilder.value
+    }
 
 public fun getMeatState(block: StateImpl.Builder<Op.Meat.Get>.() -> Unit): State<Op.Meat.Get> =
     StateImpl.Builder<Op.Meat.Get>().apply(block).build()
