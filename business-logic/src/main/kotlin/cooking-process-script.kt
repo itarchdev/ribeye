@@ -4,10 +4,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import ru.it_arch.tools.samples.ribeye.ResourceRepository
-import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
-import ru.it_arch.tools.samples.ribeye.dsl.Op
-import ru.it_arch.tools.samples.ribeye.dsl.State
-import ru.it_arch.tools.samples.ribeye.dsl.SteakReady
+import ru.it_arch.tools.samples.ribeye.CookingProcess
+import ru.it_arch.tools.samples.ribeye.Op
+import ru.it_arch.tools.samples.ribeye.State
+import ru.it_arch.tools.samples.ribeye.SteakReady
 
 /**
  * Технологическая карта приготовления стейка.

@@ -6,23 +6,11 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldStartWith
 import io.kotest.provided.neg
 import io.kotest.provided.pos
-import ru.it_arch.tools.samples.ribeye.dsl.Op
-import ru.it_arch.tools.samples.ribeye.dsl.ValueChain
-import ru.it_arch.tools.samples.ribeye.dsl.impl.MacronutrientsImpl
-import ru.it_arch.tools.samples.ribeye.dsl.impl.checkGrillState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.checkMeatState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.getGrillState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.getMeatState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.getSauceIngredientsState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.grill
-import ru.it_arch.tools.samples.ribeye.dsl.impl.marinateState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.meat
-import ru.it_arch.tools.samples.ribeye.dsl.impl.sauceIngredients
-import ru.it_arch.tools.samples.ribeye.dsl.impl.toBuilder
-import ru.it_arch.tools.samples.ribeye.dsl.impl.toDslBuilder
-import ru.it_arch.tools.samples.ribeye.dsl.impl.valueChain
-import ru.it_arch.tools.samples.ribeye.dsl.impl.weight
-import javax.crypto.Mac
+import ru.it_arch.tools.samples.ribeye.Op
+import ru.it_arch.tools.samples.ribeye.ValueChain
+import ru.it_arch.tools.samples.ribeye.dsl.grill
+import ru.it_arch.tools.samples.ribeye.dsl.meat
+import ru.it_arch.tools.samples.ribeye.dsl.sauceIngredients
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
@@ -258,6 +246,20 @@ class BusinessLogicTest : FunSpec({
         }
     }
 
-    context("stateFor")
+    context("stateForPrepareSauce") {
+        val preparedSauce = prepareSauceState {
+            opType = Op.Sauce.Prepare::class
+            macronutrients = MacronutrientsImpl.DEFAULT.toDslBuilder().apply {
+                calories = 350.0
+            }.build()
+            quantity = 170.weight
+            elapsed = 2.minutes
+            value = 64.valueChain
+        }
+
+        pos("must check parameters and create correct state") {
+
+        }
+    }
 
 })

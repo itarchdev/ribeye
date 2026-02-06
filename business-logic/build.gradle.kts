@@ -18,7 +18,7 @@ kotlin {
 }
 
 dependencies {
-    api(project(":api"))
+    api(project(":dsl"))
 
     testImplementation(project(":commons"))
     testImplementation(libs.mockk)

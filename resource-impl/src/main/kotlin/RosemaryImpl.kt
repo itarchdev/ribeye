@@ -1,8 +1,7 @@
-package ru.it_arch.tools.samples.ribeye.dsl.impl
+package ru.it_arch.tools.samples.ribeye.resource.impl
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -14,15 +13,14 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.encoding.decodeStructure
 import kotlinx.serialization.encoding.encodeStructure
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.dsl.Expiration
-import ru.it_arch.tools.samples.ribeye.dsl.Macronutrients
-import ru.it_arch.tools.samples.ribeye.dsl.Quantity
-import ru.it_arch.tools.samples.ribeye.dsl.Resource
+import ru.it_arch.tools.samples.ribeye.Expiration
+import ru.it_arch.tools.samples.ribeye.Macronutrients
+import ru.it_arch.tools.samples.ribeye.Quantity
+import ru.it_arch.tools.samples.ribeye.Resource
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 @ConsistentCopyVisibility
-@Serializable(with = RosemaryImpl.Companion::class)
 public data class RosemaryImpl private constructor(
     override val macronutrients: Macronutrients,
     override val quantity: Quantity.Piece,
@@ -67,8 +65,8 @@ public data class RosemaryImpl private constructor(
 
             return RosemaryImpl(
                 macronutrients!!,
-                QuantityPieceImpl(quantity!!),
-                ExpirationImpl(expiration!!)
+                Quantity.Piece(quantity!!),
+                Expiration(expiration!!)
             )
         }
     }
@@ -77,7 +75,7 @@ public data class RosemaryImpl private constructor(
     public companion object : KSerializer<RosemaryImpl> {
         override val descriptor: SerialDescriptor =
             buildClassSerialDescriptor(RosemaryImpl::class.java.name) {
-                element<MacronutrientsImpl>("macronutrients")
+                element<Macronutrients>("macronutrients")
                 element<Int>("quantity")
                 element<Instant>("expiration")
             }
@@ -87,14 +85,14 @@ public data class RosemaryImpl private constructor(
                 encodeSerializableElement(
                     descriptor,
                     0,
-                    MacronutrientsImpl.Companion.serializer(),
-                    value.macronutrients as MacronutrientsImpl
+                    MacronutrientsSerializer(),
+                    value.macronutrients
                 )
                 encodeIntElement(descriptor, 1, value.quantity.boxed)
                 encodeSerializableElement(
                     descriptor,
                     2,
-                    Instant.Companion.serializer(),
+                    Instant.serializer(),
                     value.expiration.boxed
                 )
             }
@@ -108,15 +106,15 @@ public data class RosemaryImpl private constructor(
                             0 -> macronutrients = decodeSerializableElement(
                                 descriptor,
                                 0,
-                                MacronutrientsImpl.Companion.serializer()
+                                MacronutrientsSerializer()
                             )
                             1 -> quantity =
-                                QuantityPieceImpl(decodeIntElement(descriptor, 1))
+                                Quantity.Piece(decodeIntElement(descriptor, 1))
                             2 -> expiration = decodeSerializableElement(
                                 descriptor,
                                 2,
                                 Instant.Companion.serializer()
-                            ).let { ExpirationImpl(it) }
+                            ).let { Expiration(it) }
                             DECODE_DONE -> break@loop
                             else -> throw SerializationException("Unexpected index $i")
                         }

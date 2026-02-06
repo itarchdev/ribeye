@@ -1,7 +1,7 @@
 package ru.it_arch.tools.samples.ribeye.storage.slot
 
-import ru.it_arch.tools.samples.ribeye.dsl.Macronutrients
-import ru.it_arch.tools.samples.ribeye.dsl.Resource
+import ru.it_arch.tools.samples.ribeye.Macronutrients
+import ru.it_arch.tools.samples.ribeye.Resource
 
 fun Macronutrients.format(): String =
 """{

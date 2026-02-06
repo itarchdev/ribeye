@@ -1,16 +1,7 @@
 package ru.it_arch.tools.samples.ribeye.storage.impl
 
 import kotlinx.serialization.json.Json
-import ru.it_arch.tools.samples.ribeye.dsl.Macronutrients
-import ru.it_arch.tools.samples.ribeye.dsl.Quantity
-import ru.it_arch.tools.samples.ribeye.dsl.Resource
-import ru.it_arch.tools.samples.ribeye.dsl.impl.GrillImpl
-import ru.it_arch.tools.samples.ribeye.dsl.impl.MacronutrientsImpl
-import ru.it_arch.tools.samples.ribeye.dsl.impl.MeatImpl
-import ru.it_arch.tools.samples.ribeye.dsl.impl.QuantityPieceImpl
-import ru.it_arch.tools.samples.ribeye.dsl.impl.QuantityWeightImpl
-import ru.it_arch.tools.samples.ribeye.dsl.impl.RosemaryImpl
-import ru.it_arch.tools.samples.ribeye.dsl.impl.SauceIngredientsImpl
+import ru.it_arch.tools.samples.ribeye.Quantity
 import ru.it_arch.tools.samples.ribeye.storage.SlotFactory
 
 internal val json = Json {

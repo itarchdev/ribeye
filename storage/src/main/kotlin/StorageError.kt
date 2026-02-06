@@ -1,6 +1,6 @@
 package ru.it_arch.tools.samples.ribeye.storage
 
-import ru.it_arch.tools.samples.ribeye.dsl.Expiration
+import ru.it_arch.tools.samples.ribeye.Expiration
 
 public sealed class StorageError(msg: String) : RuntimeException(msg) {
     public class NotFound(

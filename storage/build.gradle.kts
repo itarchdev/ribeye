@@ -42,7 +42,7 @@ testlogger {
 }
 
 dependencies {
-    api(project(":api"))
+    api(project(":dsl"))
     api(libs.kotlinx.serialization.json)
     implementation(project(":slot"))
 

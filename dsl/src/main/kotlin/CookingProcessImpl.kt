@@ -1,13 +1,6 @@
-package ru.it_arch.tools.samples.ribeye.dsl.impl
+package ru.it_arch.tools.samples.ribeye
 
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.ResourceRepository
-import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
-import ru.it_arch.tools.samples.ribeye.dsl.Event
-import ru.it_arch.tools.samples.ribeye.dsl.Op
-import ru.it_arch.tools.samples.ribeye.dsl.State
-import ru.it_arch.tools.samples.ribeye.dsl.SteakReady
-import ru.it_arch.tools.samples.ribeye.dsl.impl.OpCompletedImpl.Companion.opCompleted
 
 @ConsistentCopyVisibility
 public data class CookingProcessImpl private constructor(
@@ -90,7 +83,11 @@ public data class CookingProcessImpl private constructor(
     ) : Op.Meat.Get by getMeat {
 
         override suspend fun invoke(storage: ResourceRepository): Result<State<Op.Meat.Get>> =
-            getMeat(storage).also { result -> listener?.let { it(opCompleted(result)) } }
+            getMeat(storage).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 
     private class CheckMeatWrapper(
@@ -99,7 +96,11 @@ public data class CookingProcessImpl private constructor(
     ) : Op.Meat.Check by checkMeat {
 
         override suspend fun invoke(meat: State<Op.Meat.Get>): Result<State<Op.Meat.Check>> =
-            checkMeat(meat).also { result -> listener?.let { it(opCompleted(result)) } }
+            checkMeat(meat).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 
     private class MarinateWrapper(
@@ -108,7 +109,11 @@ public data class CookingProcessImpl private constructor(
     ) : Op.Meat.Marinate by marinate {
 
         override suspend fun invoke(meat: State<Op.Meat.Check>): Result<State<Op.Meat.Marinate>> =
-            marinate(meat).also { result -> listener?.let { it(opCompleted(result)) } }
+            marinate(meat).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 
     private class GetGrillWrapper(
@@ -117,7 +122,11 @@ public data class CookingProcessImpl private constructor(
     ) : Op.Grill.Get by getGrill {
 
         override suspend fun invoke(storage: ResourceRepository): Result<State<Op.Grill.Get>> =
-            getGrill(storage).also { result -> listener?.let { it(opCompleted(result)) } }
+            getGrill(storage).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 
     private class CheckGrillWrapper(
@@ -125,7 +134,11 @@ public data class CookingProcessImpl private constructor(
         private val listener: ((Event.OpCompleted<Op.Grill.Check>) -> Unit)?
     ) : Op.Grill.Check by checkGreill {
         override suspend fun invoke(grill: State<Op.Grill.Get>): Result<State<Op.Grill.Check>> =
-            checkGreill(grill).also { result -> listener?.let { it(opCompleted(result)) } }
+            checkGreill(grill).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 
     private class GetSauceWrapper(
@@ -134,7 +147,11 @@ public data class CookingProcessImpl private constructor(
     ) : Op.Sauce.Get by getSauce {
 
         override suspend fun invoke(storage: ResourceRepository): Result<State<Op.Sauce.Get>> =
-            getSauce(storage).also { result -> listener?.let { it(opCompleted(result)) } }
+            getSauce(storage).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 
     private class PrepareSauceWrapper(
@@ -142,7 +159,11 @@ public data class CookingProcessImpl private constructor(
         private val listener: ((Event.OpCompleted<Op.Sauce.Prepare>) -> Unit)?
     ) : Op.Sauce.Prepare by prepareSauce {
         override suspend fun invoke(sauce: State<Op.Sauce.Get>): Result<State<Op.Sauce.Prepare>> =
-            prepareSauce(sauce).also { result -> listener?.let { it(opCompleted(result)) } }
+            prepareSauce(sauce).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 
     private class GetRosemaryWrapper(
@@ -151,7 +172,11 @@ public data class CookingProcessImpl private constructor(
     ) : Op.Rosemary.Get by getRosemary {
 
         override suspend fun invoke(storage: ResourceRepository): Result<State<Op.Rosemary.Get>> =
-            getRosemary(storage).also { result -> listener?.let { it(opCompleted(result)) } }
+            getRosemary(storage).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 
     private class RoastRosemaryWrapper(
@@ -159,7 +184,11 @@ public data class CookingProcessImpl private constructor(
         private val listener: ((Event.OpCompleted<Op.Rosemary.Roast>) -> Unit)?
     ) : Op.Rosemary.Roast by roastRosemary {
         override suspend fun invoke(rosemary: State<Op.Rosemary.Get>): Result<State<Op.Rosemary.Roast>> =
-            roastRosemary(rosemary).also { result -> listener?.let { it(opCompleted(result)) } }
+            roastRosemary(rosemary).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 
     private class SteakStartWrapper(
@@ -170,7 +199,11 @@ public data class CookingProcessImpl private constructor(
             meat: State<Op.Meat.Marinate>,
             grill: State<Op.Grill.Check>
         ): Result<State<Op.Meat.PrepareForRoasting>> =
-            steak(meat, grill).also { result -> listener?.let { it(opCompleted(result)) } }
+            steak(meat, grill).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 
     private class SteakRoastWrapper(
@@ -178,7 +211,11 @@ public data class CookingProcessImpl private constructor(
         private val listener: ((Event.OpCompleted<Op.Meat.Roast>) -> Unit)?
     ) : Op.Meat.Roast by roast {
         override suspend fun invoke(steak: State<Op.Meat.PrepareForRoasting>): Result<State<Op.Meat.Roast>> =
-            roast(steak).also { result -> listener?.let { it(opCompleted(result)) } }
+            roast(steak).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 
     private class ServeWrapper(
@@ -191,7 +228,7 @@ public data class CookingProcessImpl private constructor(
             rosemary: Result<State<Op.Rosemary.Roast>>
         ): Result<State<Op.Meat.Serve>> =
             serve(steak, sauce, rosemary)
-                .also { result -> listener?.let { it(opCompleted(result)) } }
+                .also { result -> listener?.let { it(Event.OpCompleted.Companion.opCompleted(result)) } }
     }
 
     private class FinishWrapper(
@@ -199,6 +236,10 @@ public data class CookingProcessImpl private constructor(
         private val listener: ((Event.OpCompleted<Op.Finish>) -> Unit)?
     ) : Op.Finish by finish {
         override suspend fun invoke(steak: State<Op.Meat.Serve>): Result<SteakReady> =
-            finish(steak).also { result -> listener?.let { it(opCompleted(result)) } }
+            finish(steak).also { result -> listener?.let { it(
+                Event.OpCompleted.Companion.opCompleted(
+                    result
+                )
+            ) } }
     }
 }

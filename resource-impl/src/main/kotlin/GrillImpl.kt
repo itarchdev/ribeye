@@ -1,8 +1,7 @@
-package ru.it_arch.tools.samples.ribeye.dsl.impl
+package ru.it_arch.tools.samples.ribeye.resource.impl
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -14,20 +13,19 @@ import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.encoding.decodeStructure
 import kotlinx.serialization.encoding.encodeStructure
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.dsl.Expiration
-import ru.it_arch.tools.samples.ribeye.dsl.Macronutrients
-import ru.it_arch.tools.samples.ribeye.dsl.Quantity
-import ru.it_arch.tools.samples.ribeye.dsl.Resource
+import ru.it_arch.tools.samples.ribeye.Expiration
+import ru.it_arch.tools.samples.ribeye.Macronutrients
+import ru.it_arch.tools.samples.ribeye.Quantity
+import ru.it_arch.tools.samples.ribeye.Resource
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
 @ConsistentCopyVisibility
-@Serializable(with = SauceIngredientsImpl.Companion::class)
-public data class SauceIngredientsImpl private constructor(
+public data class GrillImpl private constructor(
     override val macronutrients: Macronutrients,
     override val quantity: Quantity.Weight,
     override val expiration: Expiration
-) : Resource.SauceIngredients {
+) : Resource.Grill {
 
     init {
         validate()
@@ -41,17 +39,18 @@ public data class SauceIngredientsImpl private constructor(
             expiration = args[2] as Expiration
         }.build() as T
 
+    // TODO: Builders
     public class Builder {
         public var macronutrients: Macronutrients? = null
         public var quantity: Quantity.Weight? = null
         public var expiration: Expiration? = null
 
-        public fun build(): Resource.SauceIngredients {
-            requireNotNull(macronutrients) { "SauceIngredients.macronutrients must be set" }
-            requireNotNull(quantity) { "SauceIngredients.quantity must be set" }
-            requireNotNull(expiration) { "SauceIngredients.expiration must be set" }
+        public fun build(): Resource.Grill {
+            requireNotNull(macronutrients) { "Grill.macronutrients must be set" }
+            requireNotNull(quantity) { "Grill.quantity must be set" }
+            requireNotNull(expiration) { "Grill.expiration must be set" }
 
-            return SauceIngredientsImpl(macronutrients!!, quantity!!, expiration!!)
+            return GrillImpl(macronutrients!!, quantity!!, expiration!!)
         }
     }
 
@@ -60,47 +59,47 @@ public data class SauceIngredientsImpl private constructor(
         public var quantity: Long? = null
         public var expiration: Instant? = null
 
-        public fun build(): Resource.SauceIngredients {
-            requireNotNull(macronutrients) { "SauceIngredients.macronutrients must be set" }
-            requireNotNull(quantity) { "SauceIngredients.quantity must be set" }
-            requireNotNull(expiration) { "SauceIngredients.expiration must be set" }
+        public fun build(): Resource.Grill {
+            requireNotNull(macronutrients) { "Grill.macronutrients must be set" }
+            requireNotNull(quantity) { "Grill.quantity must be set" }
+            requireNotNull(expiration) { "Grill.expiration must be set" }
 
-            return SauceIngredientsImpl(
+            return GrillImpl(
                 macronutrients!!,
-                QuantityWeightImpl(quantity!!),
-                ExpirationImpl(expiration!!)
+                Quantity.Weight(quantity!!),
+                Expiration(expiration!!)
             )
         }
     }
 
     @OptIn(ExperimentalTime::class, ExperimentalSerializationApi::class)
-    public companion object : KSerializer<SauceIngredientsImpl> {
+    public companion object : KSerializer<GrillImpl> {
         override val descriptor: SerialDescriptor =
-            buildClassSerialDescriptor(SauceIngredientsImpl::class.java.name) {
-                element<MacronutrientsImpl>("macronutrients")
+            buildClassSerialDescriptor(GrillImpl::class.java.name) {
+                element<Macronutrients>("macronutrients")
                 element<Long>("quantity")
                 element<Instant>("expiration")
             }
 
-        override fun serialize(encoder: Encoder, value: SauceIngredientsImpl) {
+        override fun serialize(encoder: Encoder, value: GrillImpl) {
             encoder.encodeStructure(descriptor) {
                 encodeSerializableElement(
                     descriptor,
                     0,
-                    MacronutrientsImpl.Companion.serializer(),
-                    value.macronutrients as MacronutrientsImpl
+                    MacronutrientsSerializer(),
+                    value.macronutrients
                 )
                 encodeLongElement(descriptor, 1, value.quantity.boxed)
                 encodeSerializableElement(
                     descriptor,
                     2,
-                    Instant.Companion.serializer(),
+                    Instant.serializer(),
                     value.expiration.boxed
                 )
             }
         }
 
-        override fun deserialize(decoder: Decoder): SauceIngredientsImpl =
+        override fun deserialize(decoder: Decoder): GrillImpl =
             decoder.decodeStructure(descriptor) {
                 Builder().apply {
                     loop@ while (true) {
@@ -108,20 +107,20 @@ public data class SauceIngredientsImpl private constructor(
                             0 -> macronutrients = decodeSerializableElement(
                                 descriptor,
                                 0,
-                                MacronutrientsImpl.Companion.serializer()
+                                MacronutrientsSerializer()
                             )
                             1 -> quantity =
-                                QuantityWeightImpl(decodeLongElement(descriptor, 1))
+                                Quantity.Weight(decodeLongElement(descriptor, 1))
                             2 -> expiration = decodeSerializableElement(
                                 descriptor,
                                 2,
                                 Instant.Companion.serializer()
-                            ).let { ExpirationImpl(it) }
+                            ).let { Expiration(it) }
                             DECODE_DONE -> break@loop
                             else -> throw SerializationException("Unexpected index $i")
                         }
                     }
-                }.build() as SauceIngredientsImpl
+                }.build() as GrillImpl
             }
     }
 }

@@ -1,4 +1,4 @@
-package ru.it_arch.tools.samples.ribeye.dsl
+package ru.it_arch.tools.samples.ribeye
 
 import ru.it_arch.k3dm.ValueObject
 import java.math.BigDecimal
@@ -17,7 +17,15 @@ public sealed interface Quantity {
     /**
      * Штучное измерение
      * */
-    public interface Piece : ValueObject.Value<Int>, Quantity, Comparable<Piece> {
+    @JvmInline
+    public value class Piece private constructor(
+        override val boxed: Int
+    ): ValueObject.Value<Int>, Quantity, Comparable<Piece> {
+
+        init {
+            validate()
+        }
+
         override fun validate() {
             require(boxed >= 0) { "Quantity.Pack must be >= 0" }
         }
@@ -41,12 +49,32 @@ public sealed interface Quantity {
                 .toInt()
             return apply(base)
         }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ValueObject.Value<Int>> apply(boxed: Int): T =
+            Piece(boxed) as T
+
+        override fun toString(): String =
+            boxed.toString()
+
+        public companion object Companion {
+            public operator fun invoke(value: Int): Piece =
+                Piece(value)
+        }
     }
 
     /**
      * Весовое измерение в минимальных единицах точности
      * */
-    public interface Weight : ValueObject.Value<Long>, Quantity, Comparable<Weight> {
+    @JvmInline
+    public value class Weight(
+        override val boxed: Long
+    ) : ValueObject.Value<Long>, Quantity, Comparable<Weight> {
+
+        init {
+            validate()
+        }
+
         override fun validate() {
             require(boxed >= 0) { "Quantity.Weight must be >= 0" }
         }
@@ -70,14 +98,32 @@ public sealed interface Quantity {
                 .toLong()
             return apply(base)
         }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ValueObject.Value<Long>> apply(boxed: Long): T =
+            Weight(boxed) as T
+
+        override fun toString(): String =
+            boxed.toString()
+
+        public companion object {
+            public operator fun invoke(value: Long): Weight =
+                Weight(value)
+        }
     }
 
     /**
      * Долевое измерение в рациональных числах (треть, половина и т.п.)
      * */
-    public interface Fraction : ValueObject.Data, Quantity {
-        public val numerator: Int
+    @ConsistentCopyVisibility
+    public data class Fraction private constructor(
+        public val numerator: Int,
         public val denominator: Int
+    ): ValueObject.Data, Quantity {
+
+        init {
+            validate()
+        }
 
         override fun validate() {
             require(numerator >= 0 && denominator > 0) { "Quantity.Fraction must be rational non-zero number" }
@@ -85,6 +131,15 @@ public sealed interface Quantity {
 
         override fun addPercent(value: Double): Quantity {
             TODO("Not yet implemented")
+        }
+
+        override fun <T : ValueObject.Data> fork(vararg args: Any?): T {
+            TODO("Not used")
+        }
+
+        public companion object {
+            public operator fun invoke(numerator: Int, denominator: Int): Fraction =
+                Fraction(numerator, denominator)
         }
     }
 }

@@ -1,4 +1,4 @@
-package ru.it_arch.tools.samples.ribeye.dsl
+package ru.it_arch.tools.samples.ribeye
 
 import ru.it_arch.k3dm.ValueObject
 

@@ -18,21 +18,12 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
 import ru.it_arch.tools.samples.ribeye.WriteResourceRepository
-import ru.it_arch.tools.samples.ribeye.dsl.Quantity
-import ru.it_arch.tools.samples.ribeye.dsl.Resource
-import ru.it_arch.tools.samples.ribeye.pull
-import ru.it_arch.tools.samples.ribeye.put
-import ru.it_arch.tools.samples.ribeye.size
-import ru.it_arch.tools.samples.ribeye.dsl.impl.MacronutrientsImpl
-import ru.it_arch.tools.samples.ribeye.dsl.impl.QuantityWeightImpl
-import ru.it_arch.tools.samples.ribeye.dsl.impl.format
-import ru.it_arch.tools.samples.ribeye.dsl.impl.grill
-import ru.it_arch.tools.samples.ribeye.dsl.impl.macronutrients
-import ru.it_arch.tools.samples.ribeye.dsl.impl.meat
-import ru.it_arch.tools.samples.ribeye.dsl.impl.piece
-import ru.it_arch.tools.samples.ribeye.dsl.impl.rosemary
-import ru.it_arch.tools.samples.ribeye.dsl.impl.sauceIngredients
-import ru.it_arch.tools.samples.ribeye.dsl.impl.weight
+import ru.it_arch.tools.samples.ribeye.Quantity
+import ru.it_arch.tools.samples.ribeye.Resource
+import ru.it_arch.tools.samples.ribeye.dsl.grill
+import ru.it_arch.tools.samples.ribeye.dsl.meat
+import ru.it_arch.tools.samples.ribeye.dsl.rosemary
+import ru.it_arch.tools.samples.ribeye.dsl.sauceIngredients
 import ru.it_arch.tools.samples.ribeye.storage.impl.slotFactory
 import ru.it_arch.tools.samples.ribeye.storage.slot.Slot
 import kotlin.reflect.KClass
@@ -127,7 +118,7 @@ class StorageTest: FunSpec({
                 val deferredStorageSizeExecution = async(SupervisorJob()) {
                     // Операция со слотом, которому суждено быть убитым:
                     // storage.size() вызовет Slot.size() убитого слота
-                    storage.size<ru.it_arch.tools.samples.ribeye.dsl.Resource.Grill, Quantity.Weight>()
+                    storage.size<Resource.Grill, Quantity.Weight>()
                 }
 
                 // Делаем бяку: изменяем состояние слота путем добавления нового ресурса, что должно
@@ -198,7 +189,7 @@ class StorageTest: FunSpec({
 
             runTest(testDispatcher) {
                 val deferredStorageSizeExecution = async(SupervisorJob()) {
-                    storage.size<ru.it_arch.tools.samples.ribeye.dsl.Resource.SauceIngredients, Quantity.Weight>()
+                    storage.size<Resource.SauceIngredients, Quantity.Weight>()
                 }
 
                 sauceIngredients {

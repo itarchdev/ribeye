@@ -4,13 +4,11 @@ import kotlinx.coroutines.delay
 import ru.it_arch.tools.samples.ribeye.bl.stateForGetMeat
 import ru.it_arch.tools.samples.ribeye.bl.stateForCheckMeat
 import ru.it_arch.tools.samples.ribeye.bl.stateForMarinate
-import ru.it_arch.tools.samples.ribeye.dsl.Resource
-import ru.it_arch.tools.samples.ribeye.dsl.Op
-import ru.it_arch.tools.samples.ribeye.dsl.State
-import ru.it_arch.tools.samples.ribeye.dsl.impl.cookingProcess
-import ru.it_arch.tools.samples.ribeye.dsl.impl.weight
-import ru.it_arch.tools.samples.ribeye.dsl.impl.valueChain
-import ru.it_arch.tools.samples.ribeye.pull
+import ru.it_arch.tools.samples.ribeye.Resource
+import ru.it_arch.tools.samples.ribeye.Op
+import ru.it_arch.tools.samples.ribeye.State
+import ru.it_arch.tools.samples.ribeye.dsl.weight
+import ru.it_arch.tools.samples.ribeye.dsl.valueChain
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.measureTime
 import kotlin.time.measureTimedValue
@@ -63,6 +61,12 @@ val interpreter = cookingProcess {
             valueChain = 40.valueChain()
         ).let{ Result.success(it) }
     }
+
+    steakStart = { meat, grill ->
+
+
+    }
+
     getSauceIngredients = { storage ->
         storage.pull<Resource.SauceIngredients>(150L.weight()).mapCatching { sauce ->
             State(

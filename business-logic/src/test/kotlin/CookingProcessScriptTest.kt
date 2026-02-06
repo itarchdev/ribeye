@@ -16,10 +16,9 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runTest
 import ru.it_arch.tools.samples.ribeye.ResourceRepository
-import ru.it_arch.tools.samples.ribeye.dsl.CookingProcess
-import ru.it_arch.tools.samples.ribeye.dsl.Op
-import ru.it_arch.tools.samples.ribeye.dsl.State
-import ru.it_arch.tools.samples.ribeye.dsl.impl.StateImpl
+import ru.it_arch.tools.samples.ribeye.CookingProcess
+import ru.it_arch.tools.samples.ribeye.Op
+import ru.it_arch.tools.samples.ribeye.State
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.reflect.KClass
 import kotlin.time.Duration.Companion.days

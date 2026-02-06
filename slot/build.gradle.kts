@@ -11,7 +11,7 @@ plugins {
 dependencies {
     api(libs.kotlinx.coroutines.core)
 
-    testImplementation(project(":api"))
+    testImplementation(project(":dsl"))
     testImplementation(project(":commons"))
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)

@@ -1,26 +1,34 @@
-package ru.it_arch.tools.samples.ribeye.dsl.impl
+package ru.it_arch.tools.samples.ribeye
 
 import ru.it_arch.k3dm.ValueObject
-import ru.it_arch.tools.samples.ribeye.dsl.Macronutrients
-import ru.it_arch.tools.samples.ribeye.dsl.Op
-import ru.it_arch.tools.samples.ribeye.dsl.Quantity
-import ru.it_arch.tools.samples.ribeye.dsl.State
-import ru.it_arch.tools.samples.ribeye.dsl.ValueChain
 import kotlin.reflect.KClass
 import kotlin.time.Duration
 
+/**
+ * Состояние операции на выходе
+ *
+ * @param T тип операции
+ * @param opType [KClass] типа операции
+ * @param macronutrients КБЖУ
+ * @param quantity количество
+ * @param elapsed затраченное время
+ * @param value цепочка ценности
+ * */
+
 @ConsistentCopyVisibility
-public data class StateImpl<out T : Op> private constructor(
-    override val opType: KClass<out T>,
-    override val macronutrients: Macronutrients,
-    override val quantity: Quantity,
-    override val elapsed: Duration,
-    override val value: ValueChain
-) : State<T> {
-    
+public data class State<out T : Op> private constructor(
+    public val opType: KClass<out T>,
+    public val macronutrients: Macronutrients,
+    public val quantity: Quantity,
+    public val elapsed: Duration,
+    public val value: ValueChain
+) : ValueObject.Data {
+
     init {
         validate()
     }
+
+    override fun validate() {}
 
     @Suppress("UNCHECKED_CAST")
     override fun <R : ValueObject.Data> fork(vararg args: Any?): R =
@@ -46,7 +54,9 @@ public data class StateImpl<out T : Op> private constructor(
             requireNotNull(elapsed) { "elapsed must be set" }
             requireNotNull(value) { "value must be set" }
 
-            return StateImpl(opType!!, macronutrients!!, quantity!!, elapsed!!, value!!)
+            return State(opType!!, macronutrients!!, quantity!!, elapsed!!, value!!)
         }
     }
 }
+
+public typealias SteakReady = State<Op.Finish>

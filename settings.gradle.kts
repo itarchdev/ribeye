@@ -25,7 +25,8 @@ include(
     "commons",
     "slot",
     "storage",
-    "api",
+    "resource-impl",
+    "dsl",
     "business-logic",
     "app"
 )

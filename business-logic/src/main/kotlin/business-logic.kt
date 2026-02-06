@@ -1,19 +1,8 @@
 package ru.it_arch.tools.samples.ribeye.bl
 
-import ru.it_arch.tools.samples.ribeye.dsl.Resource
-import ru.it_arch.tools.samples.ribeye.dsl.Op
-import ru.it_arch.tools.samples.ribeye.dsl.State
-import ru.it_arch.tools.samples.ribeye.dsl.ValueChain
-import ru.it_arch.tools.samples.ribeye.dsl.impl.ValueChainImpl
-import ru.it_arch.tools.samples.ribeye.dsl.impl.checkGrillState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.checkMeatState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.fats
-import ru.it_arch.tools.samples.ribeye.dsl.impl.getGrillState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.getMeatState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.getSauceIngredientsState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.marinateState
-import ru.it_arch.tools.samples.ribeye.dsl.impl.weight
-import ru.it_arch.tools.samples.ribeye.dsl.impl.valueChain
+import ru.it_arch.tools.samples.ribeye.Op
+import ru.it_arch.tools.samples.ribeye.State
+import ru.it_arch.tools.samples.ribeye.ValueChain
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.time.Duration
@@ -38,7 +27,7 @@ public fun Duration.simpleValueChain(overheadCostsFactor: Double, fixedOverhead:
     val cost = laborRateInSeconds * elapsedInSeconds
     val multiplier = BigDecimal.ONE + BigDecimal.valueOf(overheadCostsFactor)
     val totalRaw = cost * multiplier + fixedOverhead.boxed
-    return ValueChainImpl(totalRaw.setScale(LaborRate.SCALE, RoundingMode.HALF_UP))
+    return totalRaw.setScale(LaborRate.SCALE, RoundingMode.HALF_UP).valueChain
 }
 
 
@@ -100,8 +89,8 @@ public fun State<Op.Meat.Check>.stateForMarinate(elapsed: Duration): State<Op.Me
         this.macronutrients = this@stateForMarinate.macronutrients
         // полагается, что в процессе маринования вес увеличивается на 7%
         this.quantity = this@stateForMarinate.quantity.addPercent(0.07)
-        this.elapsed = elapsed
-        this.value = elapsed.simpleValueChain(0.75, 20.valueChain)
+        this.elapsed = this@stateForMarinate.elapsed + elapsed
+        this.value = this@stateForMarinate.value + elapsed.simpleValueChain(0.75, 20.valueChain)
     }
 }
 
@@ -139,8 +128,20 @@ public fun State<Op.Grill.Get>.stateForCheckGrill(elapsed: Duration): State<Op.G
         this.opType = Op.Grill.Check::class
         this.macronutrients = this@stateForCheckGrill.macronutrients
         this.quantity = this@stateForCheckGrill.quantity
-        this.elapsed = elapsed
-        this.value = elapsed.simpleValueChain(0.23, 30.valueChain)
+        this.elapsed = this@stateForCheckGrill.elapsed + elapsed
+        this.value = this@stateForCheckGrill.value + elapsed.simpleValueChain(0.23, 30.valueChain)
+    }
+}
+
+public fun statePrepareForRoasting(
+    meatState: State<Op.Meat.Marinate>,
+    grillState: State<Op.Grill.Check>,
+    elapsed: Duration
+): State<Op.Meat.PrepareForRoasting> {
+
+
+    return steakStartState {
+
     }
 }
 
@@ -164,7 +165,25 @@ public fun Resource.SauceIngredients.stateForGetSauceIngredients(elapsed: Durati
     }
 }
 
+/**
+ * Бизнес-правила приготовления соуса и изменение состояния.
+ *
+ * @receiver состояние принятых компонентов для соуса
+ * @param elapsed затраченное операцией время
+ * @return состояние [State] приготовленного соуса
+ * */
 public fun State<Op.Sauce.Get>.stateForPrepareSauce(elapsed: Duration): State<Op.Sauce.Prepare> {
+    require(elapsed in 7.minutes..15.minutes) { "Prepare sauce: duration must be in range [7..15 min]" }
+
     // полагается, что в процессе приготовления соуса калорийность повышается на 15%
-    require() {}
+    val newCalories = macronutrients.calories * 1.15.calories
+
+    return prepareSauceState {
+        this.opType = Op.Sauce.Prepare::class
+        this.macronutrients = this@stateForPrepareSauce.macronutrients.toBuilder()
+            .apply { this.calories = newCalories }.build()
+        this.quantity = this@stateForPrepareSauce.quantity
+        this.elapsed = elapsed
+        this.value = elapsed.simpleValueChain(0.17, 35.valueChain)
+    }
 }
